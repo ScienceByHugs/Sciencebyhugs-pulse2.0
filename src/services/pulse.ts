@@ -24,6 +24,7 @@ export type TodayItem = {
 
 export type TimelineEntry = {
   id: string;
+  protocol_item_id?: string;
   amount: number;
   unit: string;
   route: string | null;
@@ -93,7 +94,7 @@ type CreateItemInput = {
   route: 'subcutaneous' | 'intramuscular' | 'oral' | 'topical' | 'other';
   doseAmount: number;
   doseUnit: string;
-  scheduledTime?: string;
+  schedule: Record<string, unknown>;
   inventoryAmount?: number;
   lowThreshold?: number;
 };
@@ -110,7 +111,7 @@ export async function createProtocolItem(input: CreateItemInput) {
       route: input.route,
       dose_amount: input.doseAmount,
       dose_unit: input.doseUnit.trim(),
-      schedule: input.scheduledTime ? { type: 'daily', time: input.scheduledTime } : {},
+      schedule: input.schedule,
       site_rotation_enabled: input.route === 'subcutaneous' || input.route === 'intramuscular'
     })
     .select()
@@ -136,7 +137,6 @@ export async function createProtocolItem(input: CreateItemInput) {
 
 export async function quickLog(item: TodayItem, site?: string) {
   const activeInventory = item.inventory_containers?.find((container) => container.is_active);
-
   const { data, error } = await supabase.rpc('log_dose_and_decrement', {
     p_protocol_item_id: item.id,
     p_amount: item.dose_amount,
@@ -151,10 +151,29 @@ export async function quickLog(item: TodayItem, site?: string) {
   return data;
 }
 
+export async function listRecentSites(limit = 100) {
+  const { data, error } = await supabase
+    .from('dose_logs')
+    .select('protocol_item_id,site,logged_at')
+    .not('site', 'is', null)
+    .order('logged_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+
+  const byItem: Record<string, string[]> = {};
+  for (const row of data ?? []) {
+    if (!row.site) continue;
+    byItem[row.protocol_item_id] ??= [];
+    byItem[row.protocol_item_id].push(row.site);
+  }
+  return byItem;
+}
+
 export async function listDoseLogs(limit = 50) {
   const { data, error } = await supabase
     .from('dose_logs')
-    .select('id,amount,unit,route,site,status,logged_at,protocol_items(name)')
+    .select('id,protocol_item_id,amount,unit,route,site,status,logged_at,protocol_items(name)')
     .order('logged_at', { ascending: false })
     .limit(limit);
 

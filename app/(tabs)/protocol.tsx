@@ -3,9 +3,12 @@ import { useFocusEffect } from 'expo-router';
 import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, radius, spacing, type } from '@/theme';
 import { createProtocol, createProtocolItem, listProtocolItems, listProtocols, type TodayItem } from '@/services/pulse';
+import { formatSchedule } from '@/domain/schedule';
 
 type Protocol = { id: string; name: string; status: string };
 const ROUTES = ['subcutaneous', 'intramuscular', 'oral', 'topical', 'other'] as const;
+const SCHEDULES = ['daily', 'weekdays', 'interval', 'cycle'] as const;
+const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 export default function ProtocolScreen() {
   const [protocols, setProtocols] = useState<Protocol[]>([]);
@@ -15,7 +18,12 @@ export default function ProtocolScreen() {
   const [dose, setDose] = useState('');
   const [unit, setUnit] = useState('mg');
   const [route, setRoute] = useState<(typeof ROUTES)[number]>('subcutaneous');
+  const [scheduleType, setScheduleType] = useState<(typeof SCHEDULES)[number]>('daily');
   const [time, setTime] = useState('08:00');
+  const [days, setDays] = useState<number[]>([1,2,3,4,5]);
+  const [everyDays, setEveryDays] = useState('2');
+  const [onDays, setOnDays] = useState('5');
+  const [offDays, setOffDays] = useState('2');
   const [inventory, setInventory] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -47,12 +55,27 @@ export default function ProtocolScreen() {
     }
   }
 
+  function toggleDay(day: number) {
+    setDays((current) => current.includes(day) ? current.filter((value) => value !== day) : [...current, day].sort());
+  }
+
+  function buildSchedule() {
+    const startDate = new Date().toISOString().slice(0, 10);
+    if (scheduleType === 'daily') return { type: 'daily', time };
+    if (scheduleType === 'weekdays') return { type: 'weekdays', time, days };
+    if (scheduleType === 'interval') return { type: 'interval', time, everyDays: Math.max(1, Number(everyDays) || 1), startDate };
+    return { type: 'cycle', time, onDays: Math.max(1, Number(onDays) || 1), offDays: Math.max(0, Number(offDays) || 0), startDate };
+  }
+
   async function addItem() {
     const numericDose = Number(dose);
     const numericInventory = inventory ? Number(inventory) : undefined;
     if (!activeProtocol) return Alert.alert('Create a protocol first');
     if (!itemName.trim() || !numericDose || numericDose <= 0 || !unit.trim()) {
       return Alert.alert('Check item details', 'Name, dose and unit are required.');
+    }
+    if (scheduleType === 'weekdays' && days.length === 0) {
+      return Alert.alert('Choose at least one day');
     }
 
     try {
@@ -63,7 +86,7 @@ export default function ProtocolScreen() {
         route,
         doseAmount: numericDose,
         doseUnit: unit,
-        scheduledTime: time,
+        schedule: buildSchedule(),
         inventoryAmount: numericInventory && numericInventory > 0 ? numericInventory : undefined
       });
       setItemName('');
@@ -105,8 +128,7 @@ export default function ProtocolScreen() {
                 <TextInput style={[styles.input, styles.flex]} placeholder="Dose" placeholderTextColor={colors.muted} keyboardType="decimal-pad" value={dose} onChangeText={setDose} />
                 <TextInput style={[styles.input, styles.flex]} placeholder="Unit" placeholderTextColor={colors.muted} value={unit} onChangeText={setUnit} autoCapitalize="none" />
               </View>
-              <TextInput style={styles.input} placeholder="Time (24h, e.g. 08:00)" placeholderTextColor={colors.muted} value={time} onChangeText={setTime} />
-              <TextInput style={styles.input} placeholder="Starting inventory (optional, same unit)" placeholderTextColor={colors.muted} keyboardType="decimal-pad" value={inventory} onChangeText={setInventory} />
+
               <Text style={styles.smallLabel}>ROUTE</Text>
               <View style={styles.chips}>
                 {ROUTES.map((value) => (
@@ -115,6 +137,39 @@ export default function ProtocolScreen() {
                   </Pressable>
                 ))}
               </View>
+
+              <Text style={styles.smallLabel}>SCHEDULE</Text>
+              <View style={styles.chips}>
+                {SCHEDULES.map((value) => (
+                  <Pressable key={value} onPress={() => setScheduleType(value)} style={[styles.chip, scheduleType === value && styles.chipActive]}>
+                    <Text style={[styles.chipText, scheduleType === value && styles.chipTextActive]}>{value}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <TextInput style={styles.input} placeholder="Time (24h)" placeholderTextColor={colors.muted} value={time} onChangeText={setTime} />
+
+              {scheduleType === 'weekdays' ? (
+                <View style={styles.dayRow}>
+                  {DAY_LABELS.map((label, day) => (
+                    <Pressable key={`${label}-${day}`} style={[styles.day, days.includes(day) && styles.dayActive]} onPress={() => toggleDay(day)}>
+                      <Text style={[styles.dayText, days.includes(day) && styles.chipTextActive]}>{label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null}
+
+              {scheduleType === 'interval' ? (
+                <TextInput style={styles.input} placeholder="Every X days" placeholderTextColor={colors.muted} keyboardType="number-pad" value={everyDays} onChangeText={setEveryDays} />
+              ) : null}
+
+              {scheduleType === 'cycle' ? (
+                <View style={styles.twoCol}>
+                  <TextInput style={[styles.input, styles.flex]} placeholder="Days on" placeholderTextColor={colors.muted} keyboardType="number-pad" value={onDays} onChangeText={setOnDays} />
+                  <TextInput style={[styles.input, styles.flex]} placeholder="Days off" placeholderTextColor={colors.muted} keyboardType="number-pad" value={offDays} onChangeText={setOffDays} />
+                </View>
+              ) : null}
+
+              <TextInput style={styles.input} placeholder="Starting inventory (optional, same unit)" placeholderTextColor={colors.muted} keyboardType="decimal-pad" value={inventory} onChangeText={setInventory} />
               <Pressable style={[styles.primary, busy && styles.disabled]} disabled={busy} onPress={() => void addItem()}><Text style={styles.primaryText}>ADD ITEM</Text></Pressable>
             </View>
 
@@ -126,6 +181,7 @@ export default function ProtocolScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.itemTitle}>{item.name}</Text>
                     <Text style={styles.cardDetail}>{item.dose_amount} {item.dose_unit} · {item.route}</Text>
+                    <Text style={styles.scheduleText}>{formatSchedule(item.schedule)}</Text>
                   </View>
                   <Text style={styles.stock}>{inventoryItem ? `${inventoryItem.remaining_amount} ${inventoryItem.unit}` : 'No stock'}</Text>
                 </View>
@@ -147,6 +203,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: 12, marginBottom: spacing.md },
   cardTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
   cardDetail: { color: colors.muted, marginTop: 4, lineHeight: 20 },
+  scheduleText: { color: colors.accent, marginTop: 5, fontSize: 12, fontWeight: '700' },
   input: { backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 13, color: colors.text, fontSize: 15 },
   twoCol: { flexDirection: 'row', gap: 10 },
   flex: { flex: 1 },
@@ -158,6 +215,10 @@ const styles = StyleSheet.create({
   chipActive: { borderColor: colors.accentBorder, backgroundColor: colors.accentSoft },
   chipText: { color: colors.muted, fontSize: 12, textTransform: 'capitalize' },
   chipTextActive: { color: colors.accent, fontWeight: '800' },
+  dayRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 6 },
+  day: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, backgroundColor: colors.panel2 },
+  dayActive: { borderColor: colors.accentBorder, backgroundColor: colors.accentSoft },
+  dayText: { color: colors.muted, fontWeight: '800' },
   itemCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.md, borderWidth: 1, borderColor: colors.border, marginTop: 8 },
   itemTitle: { color: colors.text, fontSize: 16, fontWeight: '800' },
   stock: { color: colors.accent, fontWeight: '800', fontSize: 12 },
