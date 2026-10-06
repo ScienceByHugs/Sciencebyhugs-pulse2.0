@@ -14,5 +14,7 @@ jobs:
         with:
           node-version: 22.13.0
           cache: npm
-      - run: npm ci --ignore-scripts
+      # Temporary while Expo SDK 58 targets the RN 0.88 release candidate:
+      # Reanimated 4.7 tests RN 0.88 RC but its npm peer range excludes prerelease semver.
+      - run: npm ci --legacy-peer-deps --ignore-scripts
       - run: npm run typecheck
