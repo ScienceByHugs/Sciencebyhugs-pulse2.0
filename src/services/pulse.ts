@@ -51,6 +51,15 @@ export async function listProtocols() {
   return data;
 }
 
+export async function updateProtocolStatus(protocolId: string, status: 'active' | 'paused' | 'archived') {
+  const { error } = await supabase
+    .from('protocols')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', protocolId);
+
+  if (error) throw error;
+}
+
 export async function createProtocol(name: string) {
   const userId = await currentUserId();
   const { data, error } = await supabase
