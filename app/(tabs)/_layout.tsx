@@ -1,7 +1,21 @@
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
+import { ActivityIndicator, SafeAreaView } from 'react-native';
+import { useAuth } from '@/providers/AuthProvider';
 import { colors } from '@/theme';
 
 export default function TabsLayout() {
+  const { session, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
+        <ActivityIndicator color={colors.accent} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!session) return <Redirect href="/sign-in" />;
+
   return (
     <Tabs
       screenOptions={{
