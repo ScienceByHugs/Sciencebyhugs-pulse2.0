@@ -55,9 +55,11 @@ export default function TodayScreen() {
   function cycleSite(item: TodayItem) {
     const options = sitesForRoute(item.route);
     if (!options.length) return;
-    const current = selectedSites[item.id];
+    const current = selectedSites[item.id] ?? '';
     const index = Math.max(0, options.indexOf(current));
-    setSelectedSites((state) => ({ ...state, [item.id]: options[(index + 1) % options.length] }));
+    const nextSite = options[(index + 1) % options.length];
+    if (!nextSite) return;
+    setSelectedSites((state) => ({ ...state, [item.id]: nextSite }));
   }
 
   async function log(item: TodayItem) {

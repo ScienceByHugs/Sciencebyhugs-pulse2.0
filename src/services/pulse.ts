@@ -164,8 +164,11 @@ export async function listRecentSites(limit = 100) {
   const byItem: Record<string, string[]> = {};
   for (const row of data ?? []) {
     if (!row.site) continue;
-    byItem[row.protocol_item_id] ??= [];
-    byItem[row.protocol_item_id].push(row.site);
+    const itemId = row.protocol_item_id;
+    if (!itemId) continue;
+    const list = byItem[itemId] ?? [];
+    list.push(row.site);
+    byItem[itemId] = list;
   }
   return byItem;
 }

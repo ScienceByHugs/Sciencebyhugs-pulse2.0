@@ -17,8 +17,11 @@ function dateOnly(date: Date) {
 }
 
 function parseLocalDate(value: string) {
-  const [y, m, d] = value.split('-').map(Number);
-  return new Date(y, (m || 1) - 1, d || 1);
+  const [rawY, rawM, rawD] = value.split('-').map(Number);
+  const y = Number.isFinite(rawY) ? rawY : 1970;
+  const m = Number.isFinite(rawM) ? rawM : 1;
+  const d = Number.isFinite(rawD) ? rawD : 1;
+  return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
 }
 
 function daysBetween(a: Date, b: Date) {
