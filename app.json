@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "Pulse",
+    "slug": "pulse-2",
+    "version": "2.0.0",
+    "orientation": "portrait",
+    "scheme": "pulse",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sciencebyhugs.pulse"
+    },
+    "android": {
+      "package": "com.sciencebyhugs.pulse",
+      "adaptiveIcon": {
+        "backgroundColor": "#07111f"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Pulse to use Face ID to protect your private protocol data."
+        }
+      ],
+      "expo-notifications",
+      "expo-secure-store",
+      [
+        "expo-widgets",
+        {
+          "widgets": [
+            {
+              "name": "PulseTodayWidget",
+              "displayName": "Pulse Today",
+              "description": "See how many Pulse items are due today without exposing medication names.",
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium",
+                  "accessoryRectangular"
+                ],
+                "initialLayout": "./widgets/PulseTodayWidget.tsx"
+              }
+            }
+          ]
+        }
+      ]
+    ]
+  }
+}

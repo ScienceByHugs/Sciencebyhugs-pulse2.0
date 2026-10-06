@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: npm
+      # Temporary while Expo SDK 58 targets the RN 0.88 release candidate:
+      # Reanimated 4.7 tests RN 0.88 RC but its npm peer range excludes prerelease semver.
+      - run: npm ci --legacy-peer-deps --ignore-scripts
+      - run: npm run typecheck
