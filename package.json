@@ -12,6 +12,8 @@
     "doctor": "npx expo-doctor"
   },
   "dependencies": {
+    "@expo/ui": "~58.0.12",
+    "@kingstinct/react-native-healthkit": "16.0.0",
     "@react-native-async-storage/async-storage": "3.1.1",
     "@supabase/supabase-js": "2.117.1",
     "expo": "~58.0.0",
@@ -19,9 +21,11 @@
     "expo-notifications": "~58.0.11",
     "expo-router": "~58.0.12",
     "expo-secure-store": "~58.0.2",
+    "expo-widgets": "~58.0.12",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native": "0.88.0-rc.3",
+    "react-native-nitro-modules": "0.37.1",
     "react-native-web": "~0.21.0"
   },
   "devDependencies": {

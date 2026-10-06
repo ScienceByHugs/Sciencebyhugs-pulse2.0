@@ -5,6 +5,8 @@ import { colors, radius, spacing, type } from '@/theme';
 import { flushQuickLogOutbox, listRecentSites, listTodayItems, quickLog, type TodayItem } from '@/services/pulse';
 import { isDueOnDate, scheduleTime } from '@/domain/schedule';
 import { sitesForRoute, suggestSite } from '@/domain/sites';
+import { rescheduleReminders } from '@/lib/reminders';
+import { updatePulseTodayWidget } from '@/lib/widgets';
 
 function timeLabel(value?: string) {
   if (!value) return 'Any time';
@@ -26,6 +28,9 @@ export default function TodayScreen() {
       await flushQuickLogOutbox();
       const [items, sites] = await Promise.all([listTodayItems(), listRecentSites()]);
       setAllItems(items);
+      const dueItems = items.filter((item) => isDueOnDate(item.schedule));
+      const nextTime = dueItems.length ? timeLabel(scheduleTime(dueItems[0]?.schedule ?? {})) : 'Open Pulse';
+      await Promise.all([rescheduleReminders(items), updatePulseTodayWidget(dueItems.length, nextTime)]);
       setRecentSites(sites);
       setSelectedSites((current) => {
         const next = { ...current };

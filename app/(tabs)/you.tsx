@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { colors, radius, spacing, type } from '@/theme';
 import { useAuth } from '@/providers/AuthProvider';
@@ -14,6 +14,7 @@ import {
 } from '@/lib/privacy';
 import { disableReminders, enableReminders, rescheduleReminders } from '@/lib/reminders';
 import { listTodayItems } from '@/services/pulse';
+import { readAppleHealthSnapshot, type AppleHealthSnapshot } from '@/lib/health';
 
 export default function YouScreen() {
   const { session } = useAuth();
@@ -21,6 +22,7 @@ export default function YouScreen() {
   const [privateNotifications, setPrivateNotificationsState] = useState(true);
   const [reminders, setReminders] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [health, setHealth] = useState<AppleHealthSnapshot | null>(null);
 
   const load = useCallback(async () => {
     const [lock, privateMode, reminderMode] = await Promise.all([
@@ -88,6 +90,24 @@ export default function YouScreen() {
     }
   }
 
+  async function connectAppleHealth() {
+    if (Platform.OS !== 'ios') {
+      Alert.alert('Apple Health', 'Apple Health is available on iPhone builds.');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const snapshot = await readAppleHealthSnapshot();
+      setHealth(snapshot);
+      if (!snapshot.available) Alert.alert('Apple Health unavailable', 'Health data is not available on this device.');
+    } catch (error) {
+      Alert.alert('Could not read Apple Health', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function signOut() {
     const { error } = await supabase.auth.signOut();
     if (error) Alert.alert('Could not sign out', error.message);
@@ -130,8 +150,23 @@ export default function YouScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Health & data</Text>
-          <Text style={styles.detail}>Apple Health, full export, and account-data deletion remain on the release track. Health permissions will be optional and scoped.</Text>
+          <Text style={styles.cardTitle}>Apple Health</Text>
+          <Text style={styles.detail}>Optional, read-only wellness context. Pulse does not use Health data for advertising or NEXUS marketing.</Text>
+          {health?.available ? (
+            <View style={styles.healthGrid}>
+              <Text style={styles.healthValue}>{health.bodyMassKg !== undefined ? `${health.bodyMassKg.toFixed(1)} kg` : '—'}</Text>
+              <Text style={styles.healthValue}>{health.heartRateBpm !== undefined ? `${Math.round(health.heartRateBpm)} bpm` : '—'}</Text>
+              <Text style={styles.healthValue}>{health.steps !== undefined ? `${Math.round(health.steps)} steps` : '—'}</Text>
+            </View>
+          ) : null}
+          <Pressable style={styles.secondaryButton} disabled={busy} onPress={() => void connectAppleHealth()}>
+            <Text style={styles.secondaryButtonText}>{health?.available ? 'REFRESH APPLE HEALTH' : 'CONNECT APPLE HEALTH'}</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Data controls</Text>
+          <Text style={styles.detail}>Full export and account-data deletion are the remaining privacy controls before release.</Text>
         </View>
 
         <Pressable style={styles.signOut} onPress={() => void signOut()}><Text style={styles.signOutText}>SIGN OUT</Text></Pressable>
@@ -172,6 +207,10 @@ const styles = StyleSheet.create({
   cardTitle: { color: colors.text, fontSize: 16, fontWeight: '800' },
   detail: { color: colors.muted, marginTop: 5, lineHeight: 19, fontSize: 13 },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
+  healthGrid: { gap: 6, marginTop: spacing.md },
+  healthValue: { color: colors.text, fontWeight: '800' },
+  secondaryButton: { borderWidth: 1, borderColor: colors.accentBorder, borderRadius: radius.md, paddingVertical: 13, alignItems: 'center', marginTop: spacing.md, backgroundColor: colors.accentSoft },
+  secondaryButtonText: { color: colors.accent, fontWeight: '900', letterSpacing: .8 },
   signOut: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: 15, alignItems: 'center', marginTop: spacing.md },
   signOutText: { color: colors.text, fontWeight: '900', letterSpacing: 1 }
 });
