@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { enqueueQuickLog, readOutbox, removeQuickLog, type QuickLogPayload } from '@/lib/outbox';
 
 export type InventorySummary = {
   id: string;
@@ -135,20 +136,77 @@ export async function createProtocolItem(input: CreateItemInput) {
   return item;
 }
 
+function clientEventId() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+    const value = Math.floor(Math.random() * 16);
+    const next = char === 'x' ? value : (value & 0x3) | 0x8;
+    return next.toString(16);
+  });
+}
+
+async function sendQuickLog(payload: QuickLogPayload) {
+  return supabase.rpc('log_dose_and_decrement', {
+    p_protocol_item_id: payload.protocolItemId,
+    p_amount: payload.amount,
+    p_unit: payload.unit,
+    p_route: payload.route ?? null,
+    p_site: payload.site ?? null,
+    p_inventory_container_id: payload.inventoryContainerId ?? null,
+    p_scheduled_for: payload.scheduledFor ?? null,
+    p_client_event_id: payload.clientEventId
+  });
+}
+
+function isNetworkError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return /network|fetch|offline|connection/i.test(message);
+}
+
 export async function quickLog(item: TodayItem, site?: string) {
   const activeInventory = item.inventory_containers?.find((container) => container.is_active);
-  const { data, error } = await supabase.rpc('log_dose_and_decrement', {
-    p_protocol_item_id: item.id,
-    p_amount: item.dose_amount,
-    p_unit: item.dose_unit,
-    p_route: item.route,
-    p_site: site ?? null,
-    p_inventory_container_id: activeInventory?.id ?? null,
-    p_scheduled_for: null
-  });
+  const payload: QuickLogPayload = {
+    protocolItemId: item.id,
+    amount: item.dose_amount,
+    unit: item.dose_unit,
+    route: item.route,
+    site: site ?? null,
+    inventoryContainerId: activeInventory?.id ?? null,
+    scheduledFor: null,
+    clientEventId: clientEventId()
+  };
 
-  if (error) throw error;
-  return data;
+  try {
+    const { data, error } = await sendQuickLog(payload);
+    if (error) throw error;
+    return { data, queued: false };
+  } catch (error) {
+    if (!isNetworkError(error)) throw error;
+    await enqueueQuickLog(payload);
+    return { data: null, queued: true };
+  }
+}
+
+export async function flushQuickLogOutbox() {
+  const queued = await readOutbox();
+  let flushed = 0;
+
+  for (const payload of queued) {
+    try {
+      const { error } = await sendQuickLog(payload);
+      if (error) {
+        if (isNetworkError(error)) break;
+        await removeQuickLog(payload.clientEventId);
+        continue;
+      }
+      await removeQuickLog(payload.clientEventId);
+      flushed += 1;
+    } catch (error) {
+      if (isNetworkError(error)) break;
+      await removeQuickLog(payload.clientEventId);
+    }
+  }
+
+  return flushed;
 }
 
 export async function listRecentSites(limit = 100) {

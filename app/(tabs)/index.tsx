@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, type } from '@/theme';
-import { listRecentSites, listTodayItems, quickLog, type TodayItem } from '@/services/pulse';
+import { flushQuickLogOutbox, listRecentSites, listTodayItems, quickLog, type TodayItem } from '@/services/pulse';
 import { isDueOnDate, scheduleTime } from '@/domain/schedule';
 import { sitesForRoute, suggestSite } from '@/domain/sites';
 
@@ -23,6 +23,7 @@ export default function TodayScreen() {
 
   const load = useCallback(async () => {
     try {
+      await flushQuickLogOutbox();
       const [items, sites] = await Promise.all([listTodayItems(), listRecentSites()]);
       setAllItems(items);
       setRecentSites(sites);
@@ -65,9 +66,9 @@ export default function TodayScreen() {
   async function log(item: TodayItem) {
     try {
       setLoggingId(item.id);
-      await quickLog(item, selectedSites[item.id]);
-      await load();
-      Alert.alert('Logged', `${item.name} · ${item.dose_amount} ${item.dose_unit}`);
+      const result = await quickLog(item, selectedSites[item.id]);
+      if (!result.queued) await load();
+      Alert.alert(result.queued ? 'Saved offline' : 'Logged', result.queued ? 'Pulse will sync this log when your connection returns.' : `${item.name} · ${item.dose_amount} ${item.dose_unit}`);
     } catch (error) {
       Alert.alert('Could not log dose', error instanceof Error ? error.message : 'Unknown error');
     } finally {
