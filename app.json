@@ -31,14 +31,6 @@
       "expo-notifications",
       "expo-secure-store",
       [
-        "@kingstinct/react-native-healthkit",
-        {
-          "NSHealthShareUsageDescription": "Pulse reads only the Health data you choose so you can view optional wellness context alongside your protocol history.",
-          "NSHealthUpdateUsageDescription": "Pulse saves Health data only when you explicitly choose to do so.",
-          "background": false
-        }
-      ],
-      [
         "expo-widgets",
         {
           "widgets": [
@@ -47,7 +39,11 @@
               "displayName": "Pulse Today",
               "description": "See how many Pulse items are due today without exposing medication names.",
               "ios": {
-                "supportedFamilies": ["systemSmall", "systemMedium", "accessoryRectangular"],
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium",
+                  "accessoryRectangular"
+                ],
                 "initialLayout": "./widgets/PulseTodayWidget.tsx"
               }
             }
