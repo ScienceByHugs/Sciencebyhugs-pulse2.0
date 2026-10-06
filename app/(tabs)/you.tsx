@@ -14,6 +14,7 @@ import {
 } from '@/lib/privacy';
 import { disableReminders, enableReminders, rescheduleReminders } from '@/lib/reminders';
 import { listTodayItems } from '@/services/pulse';
+import { deletePulseAccount, exportPulseData } from '@/services/account';
 
 export default function YouScreen() {
   const { session } = useAuth();
@@ -88,6 +89,43 @@ export default function YouScreen() {
     }
   }
 
+  async function exportData() {
+    setBusy(true);
+    try {
+      await exportPulseData();
+    } catch (error) {
+      Alert.alert('Could not export data', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function confirmDeleteAccount() {
+    Alert.alert(
+      'Delete Pulse account?',
+      'This permanently deletes your Pulse 2.0 account and all synced protocol, inventory, and log data. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              setBusy(true);
+              try {
+                await deletePulseAccount();
+              } catch (error) {
+                Alert.alert('Could not delete account', error instanceof Error ? error.message : 'Unknown error');
+              } finally {
+                setBusy(false);
+              }
+            })();
+          }
+        }
+      ]
+    );
+  }
+
   async function signOut() {
     const { error } = await supabase.auth.signOut();
     if (error) Alert.alert('Could not sign out', error.message);
@@ -131,7 +169,13 @@ export default function YouScreen() {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Data controls</Text>
-          <Text style={styles.detail}>Full export and account-data deletion are the remaining privacy controls before release.</Text>
+          <Text style={styles.detail}>Your Pulse data belongs to you. Export a portable JSON copy or permanently delete your account and synced data.</Text>
+          <Pressable style={styles.dataButton} disabled={busy} onPress={() => void exportData()}>
+            <Text style={styles.dataButtonText}>EXPORT MY DATA</Text>
+          </Pressable>
+          <Pressable style={styles.deleteButton} disabled={busy} onPress={confirmDeleteAccount}>
+            <Text style={styles.deleteButtonText}>DELETE ACCOUNT & DATA</Text>
+          </Pressable>
         </View>
 
         <Pressable style={styles.signOut} onPress={() => void signOut()}><Text style={styles.signOutText}>SIGN OUT</Text></Pressable>
@@ -172,6 +216,10 @@ const styles = StyleSheet.create({
   cardTitle: { color: colors.text, fontSize: 16, fontWeight: '800' },
   detail: { color: colors.muted, marginTop: 5, lineHeight: 19, fontSize: 13 },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
+  dataButton: { borderWidth: 1, borderColor: colors.accentBorder, borderRadius: radius.md, paddingVertical: 13, alignItems: 'center', marginTop: spacing.md, backgroundColor: colors.accentSoft },
+  dataButtonText: { color: colors.accent, fontWeight: '900', letterSpacing: .8 },
+  deleteButton: { borderWidth: 1, borderColor: '#6f3030', borderRadius: radius.md, paddingVertical: 13, alignItems: 'center', marginTop: spacing.sm },
+  deleteButtonText: { color: '#ff9b9b', fontWeight: '900', letterSpacing: .8 },
   signOut: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: 15, alignItems: 'center', marginTop: spacing.md },
   signOutText: { color: colors.text, fontWeight: '900', letterSpacing: 1 }
 });
