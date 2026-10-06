@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, radius, spacing, type } from '@/theme';
-import { createProtocol, createProtocolItem, listProtocolItems, listProtocols, type TodayItem } from '@/services/pulse';
+import { createProtocol, createProtocolItem, listProtocolItems, listProtocols, updateProtocolStatus, type TodayItem } from '@/services/pulse';
 import { formatSchedule } from '@/domain/schedule';
 
 type Protocol = { id: string; name: string; status: string };
@@ -27,7 +27,7 @@ export default function ProtocolScreen() {
   const [inventory, setInventory] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const activeProtocol = useMemo(() => protocols.find((p) => p.status === 'active') ?? protocols[0], [protocols]);
+  const activeProtocol = useMemo(() => protocols.find((p) => p.status === 'active'), [protocols]);
 
   const load = useCallback(async () => {
     try {
@@ -50,6 +50,22 @@ export default function ProtocolScreen() {
       await load();
     } catch (error) {
       Alert.alert('Could not create protocol', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function setProtocolStatus(protocolId: string, status: 'active' | 'paused' | 'archived') {
+    try {
+      setBusy(true);
+      if (status === 'active') {
+        const current = protocols.find((protocol) => protocol.status === 'active' && protocol.id !== protocolId);
+        if (current) await updateProtocolStatus(current.id, 'paused');
+      }
+      await updateProtocolStatus(protocolId, status);
+      await load();
+    } catch (error) {
+      Alert.alert('Could not update protocol', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setBusy(false);
     }
@@ -115,14 +131,44 @@ export default function ProtocolScreen() {
           </View>
         ) : (
           <>
-            <View style={styles.card}>
-              <Text style={styles.smallLabel}>ACTIVE PROTOCOL</Text>
-              <Text style={styles.cardTitle}>{activeProtocol?.name}</Text>
-              <Text style={styles.cardDetail}>{items.filter((item) => item.protocol_id === activeProtocol?.id).length} tracked items</Text>
-            </View>
+            {activeProtocol ? (
+              <View style={styles.card}>
+                <Text style={styles.smallLabel}>ACTIVE PROTOCOL</Text>
+                <Text style={styles.cardTitle}>{activeProtocol.name}</Text>
+                <Text style={styles.cardDetail}>{items.filter((item) => item.protocol_id === activeProtocol.id).length} tracked items</Text>
+                <View style={styles.protocolActions}>
+                  <Pressable style={styles.secondaryAction} disabled={busy} onPress={() => void setProtocolStatus(activeProtocol.id, 'paused')}>
+                    <Text style={styles.secondaryActionText}>PAUSE</Text>
+                  </Pressable>
+                  <Pressable style={styles.archiveAction} disabled={busy} onPress={() => void setProtocolStatus(activeProtocol.id, 'archived')}>
+                    <Text style={styles.archiveActionText}>ARCHIVE</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>No active protocol</Text>
+                <Text style={styles.cardDetail}>Activate a paused protocol below to return its scheduled items to Today.</Text>
+              </View>
+            )}
 
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Add an item</Text>
+            {protocols.filter((protocol) => protocol.status !== 'active').map((protocol) => (
+              <View style={styles.protocolRow} key={protocol.id}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.itemTitle}>{protocol.name}</Text>
+                  <Text style={styles.cardDetail}>{protocol.status}</Text>
+                </View>
+                {protocol.status === 'paused' ? (
+                  <Pressable style={styles.activateButton} disabled={busy} onPress={() => void setProtocolStatus(protocol.id, 'active')}>
+                    <Text style={styles.activateText}>ACTIVATE</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ))}
+
+            {activeProtocol ? (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Add an item</Text>
               <TextInput style={styles.input} placeholder="Item name" placeholderTextColor={colors.muted} value={itemName} onChangeText={setItemName} />
               <View style={styles.twoCol}>
                 <TextInput style={[styles.input, styles.flex]} placeholder="Dose" placeholderTextColor={colors.muted} keyboardType="decimal-pad" value={dose} onChangeText={setDose} />
@@ -171,10 +217,11 @@ export default function ProtocolScreen() {
 
               <TextInput style={styles.input} placeholder="Starting inventory (optional, same unit)" placeholderTextColor={colors.muted} keyboardType="decimal-pad" value={inventory} onChangeText={setInventory} />
               <Pressable style={[styles.primary, busy && styles.disabled]} disabled={busy} onPress={() => void addItem()}><Text style={styles.primaryText}>ADD ITEM</Text></Pressable>
-            </View>
+              </View>
+            ) : null}
 
-            <Text style={styles.smallLabel}>ITEMS</Text>
-            {items.filter((item) => item.protocol_id === activeProtocol?.id).map((item) => {
+            {activeProtocol ? <Text style={styles.smallLabel}>ITEMS</Text> : null}
+            {activeProtocol ? items.filter((item) => item.protocol_id === activeProtocol.id).map((item) => {
               const inventoryItem = item.inventory_containers?.find((container) => container.is_active);
               return (
                 <View style={styles.itemCard} key={item.id}>
@@ -186,7 +233,7 @@ export default function ProtocolScreen() {
                   <Text style={styles.stock}>{inventoryItem ? `${inventoryItem.remaining_amount} ${inventoryItem.unit}` : 'No stock'}</Text>
                 </View>
               );
-            })}
+            }) : null}
           </>
         )}
       </ScrollView>
@@ -222,5 +269,13 @@ const styles = StyleSheet.create({
   itemCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.md, borderWidth: 1, borderColor: colors.border, marginTop: 8 },
   itemTitle: { color: colors.text, fontSize: 16, fontWeight: '800' },
   stock: { color: colors.accent, fontWeight: '800', fontSize: 12 },
+  protocolActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  secondaryAction: { flex: 1, borderWidth: 1, borderColor: colors.accentBorder, borderRadius: radius.md, paddingVertical: 11, alignItems: 'center', backgroundColor: colors.accentSoft },
+  secondaryActionText: { color: colors.accent, fontWeight: '900', fontSize: 11, letterSpacing: .8 },
+  archiveAction: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: 11, alignItems: 'center' },
+  archiveActionText: { color: colors.muted, fontWeight: '900', fontSize: 11, letterSpacing: .8 },
+  protocolRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm },
+  activateButton: { borderRadius: radius.md, backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentBorder, paddingHorizontal: 12, paddingVertical: 9 },
+  activateText: { color: colors.accent, fontWeight: '900', fontSize: 10, letterSpacing: .7 },
   disabled: { opacity: .55 }
 });
