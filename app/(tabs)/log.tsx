@@ -21,6 +21,29 @@ export default function LogScreen() {
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
+  const activity = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(now);
+      date.setHours(0, 0, 0, 0);
+      date.setDate(now.getDate() - (6 - index));
+      const next = new Date(date);
+      next.setDate(date.getDate() + 1);
+      const count = entries.filter((entry) => {
+        const logged = new Date(entry.logged_at);
+        return logged >= date && logged < next;
+      }).length;
+      return {
+        key: date.toISOString().slice(0, 10),
+        label: date.toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 1),
+        count,
+        today: index === 6
+      };
+    });
+  }, [entries]);
+
+  const maxActivity = useMemo(() => Math.max(1, ...activity.map((day) => day.count)), [activity]);
+
   const groups = useMemo(() => {
     const map = new Map<string, TimelineEntry[]>();
     for (const entry of entries) {
@@ -36,6 +59,27 @@ export default function LogScreen() {
         <Text style={styles.eyebrow}>YOUR HISTORY</Text>
         <Text style={styles.title}>Timeline</Text>
         <Text style={styles.body}>A clear record of what you logged, when you logged it, and where.</Text>
+
+        <View style={styles.signalCard}>
+          <View style={styles.signalHeader}>
+            <View>
+              <Text style={styles.signalEyebrow}>ACTIVITY SIGNAL</Text>
+              <Text style={styles.signalTitle}>Last 7 days</Text>
+            </View>
+            <Text style={styles.signalTotal}>{entries.length}</Text>
+          </View>
+          <View style={styles.signalStrip}>
+            {activity.map((day) => (
+              <View key={day.key} style={styles.signalDay}>
+                <View style={styles.signalTrack}>
+                  <View style={[styles.signalFill, { height: Math.max(3, Math.round((day.count / maxActivity) * 42)) }, day.count === 0 && styles.signalFillEmpty]} />
+                </View>
+                <Text style={[styles.signalLabel, day.today && styles.signalLabelToday]}>{day.label}</Text>
+                <Text style={[styles.signalCount, day.count > 0 && styles.signalCountActive]}>{day.count}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
 
         {entries.length === 0 ? (
           <View style={styles.emptyCard}>
@@ -81,6 +125,20 @@ const styles = StyleSheet.create({
   eyebrow: { color: colors.accent, fontSize: 11, fontWeight: '900', letterSpacing: 1.8, marginTop: spacing.md },
   title: { color: colors.text, fontSize: type.hero, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
   body: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.xl, maxWidth: 340 },
+  signalCard: { backgroundColor: colors.bgElevated, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.accentBorder, padding: spacing.lg, marginBottom: spacing.xl },
+  signalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  signalEyebrow: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1.5 },
+  signalTitle: { color: colors.text, fontSize: 20, fontWeight: '900', marginTop: 4 },
+  signalTotal: { color: colors.accent, fontSize: 28, lineHeight: 32, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  signalStrip: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8, marginTop: spacing.lg },
+  signalDay: { flex: 1, alignItems: 'center' },
+  signalTrack: { width: 10, height: 46, borderRadius: radius.pill, backgroundColor: colors.border, justifyContent: 'flex-end', overflow: 'hidden' },
+  signalFill: { width: '100%', backgroundColor: colors.accent, borderRadius: radius.pill },
+  signalFillEmpty: { backgroundColor: colors.subtle, opacity: .45 },
+  signalLabel: { color: colors.subtle, fontSize: 9, fontWeight: '900', marginTop: 7 },
+  signalLabelToday: { color: colors.accent },
+  signalCount: { color: colors.subtle, fontSize: 8, fontWeight: '900', marginTop: 2, fontVariant: ['tabular-nums'] },
+  signalCountActive: { color: colors.text },
   group: { marginBottom: spacing.lg },
   dayLabel: { color: colors.subtle, fontSize: 10, fontWeight: '900', letterSpacing: 1.4, marginBottom: spacing.sm, marginLeft: 4 },
   timelineRow: { flexDirection: 'row', alignItems: 'stretch' },
