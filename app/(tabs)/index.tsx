@@ -70,12 +70,20 @@ export default function TodayScreen() {
   }
 
   async function log(item: TodayItem) {
-    const lastLog = recentLogAt[item.id] ?? 0;
-    if (loggingId === item.id || Date.now() - lastLog < 5000) return;
+    if (loggingId === item.id || recentLogAt[item.id]) return;
     try {
       setLoggingId(item.id);
       const result = await quickLog(item, selectedSites[item.id]);
-      setRecentLogAt((current) => ({ ...current, [item.id]: Date.now() }));
+      const loggedAt = Date.now();
+      setRecentLogAt((current) => ({ ...current, [item.id]: loggedAt }));
+      setTimeout(() => {
+        setRecentLogAt((current) => {
+          if (current[item.id] !== loggedAt) return current;
+          const next = { ...current };
+          delete next[item.id];
+          return next;
+        });
+      }, 5000);
       if (!result.queued) await load();
       Alert.alert(result.queued ? 'Saved offline' : 'Logged', result.queued ? 'Pulse will sync this log when your connection returns.' : `${item.name} · ${item.dose_amount} ${item.dose_unit}`);
     } catch (error) {
@@ -160,10 +168,10 @@ export default function TodayScreen() {
 
                 <Pressable
                   style={[styles.primaryButton, loggingId === item.id && styles.disabled]}
-                  disabled={loggingId === item.id || Date.now() - (recentLogAt[item.id] ?? 0) < 5000}
+                  disabled={loggingId === item.id || Boolean(recentLogAt[item.id])}
                   onPress={() => void log(item)}
                 >
-                  <Text style={styles.primaryButtonText}>{loggingId === item.id ? 'LOGGING…' : Date.now() - (recentLogAt[item.id] ?? 0) < 5000 ? 'LOGGED ✓' : 'LOG DOSE'}</Text>
+                  <Text style={styles.primaryButtonText}>{loggingId === item.id ? 'LOGGING…' : recentLogAt[item.id] ? 'LOGGED ✓' : 'LOG DOSE'}</Text>
                 </Pressable>
               </View>
             </View>
