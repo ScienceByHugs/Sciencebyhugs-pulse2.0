@@ -3,7 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, radius, spacing, type } from '@/theme';
 import { createProtocol, createProtocolItem, listProtocolItems, listProtocols, updateProtocolStatus, type TodayItem } from '@/services/pulse';
-import { formatSchedule } from '@/domain/schedule';
+import { formatSchedule, isDueOnDate, scheduleTime } from '@/domain/schedule';
 
 type Protocol = { id: string; name: string; status: string };
 const ROUTES = ['subcutaneous', 'intramuscular', 'oral', 'topical', 'other'] as const;
@@ -30,6 +30,24 @@ export default function ProtocolScreen() {
   const [builderStep, setBuilderStep] = useState<1 | 2 | 3>(1);
 
   const activeProtocol = useMemo(() => protocols.find((p) => p.status === 'active'), [protocols]);
+  const activeItems = useMemo(() => activeProtocol ? items.filter((item) => item.protocol_id === activeProtocol.id) : [], [activeProtocol, items]);
+  const protocolMap = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+    return Array.from({ length: 7 }, (_, offset) => {
+      const date = new Date();
+      date.setHours(12, 0, 0, 0);
+      date.setDate(date.getDate() + offset);
+      const due = activeItems.filter((item) => isDueOnDate(item.schedule, date));
+      return {
+        key: date.toISOString().slice(0, 10),
+        label: formatter.format(date).slice(0, 3).toUpperCase(),
+        day: date.getDate(),
+        today: offset === 0,
+        due,
+        firstTime: due.map((item) => scheduleTime(item.schedule)).filter((value): value is string => Boolean(value)).sort()[0]
+      };
+    });
+  }, [activeItems]);
 
   const load = useCallback(async () => {
     try {
@@ -139,7 +157,7 @@ export default function ProtocolScreen() {
               <View style={styles.card}>
                 <Text style={styles.smallLabel}>ACTIVE PROTOCOL</Text>
                 <Text style={styles.cardTitle}>{activeProtocol.name}</Text>
-                <Text style={styles.cardDetail}>{items.filter((item) => item.protocol_id === activeProtocol.id).length} tracked items</Text>
+                <Text style={styles.cardDetail}>{activeItems.length} tracked items</Text>
                 <View style={styles.protocolActions}>
                   <Pressable style={styles.secondaryAction} disabled={busy} onPress={() => void setProtocolStatus(activeProtocol.id, 'paused')}>
                     <Text style={styles.secondaryActionText}>PAUSE</Text>
@@ -169,6 +187,47 @@ export default function ProtocolScreen() {
                 ) : null}
               </View>
             ))}
+
+            {activeProtocol && activeItems.length ? (
+              <View style={styles.mapCard}>
+                <View style={styles.mapHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.smallLabel}>PROTOCOL MAP</Text>
+                    <Text style={styles.mapTitle}>Your next 7 days</Text>
+                    <Text style={styles.cardDetail}>A live view of how your routine is distributed across the week.</Text>
+                  </View>
+                  <View style={styles.mapLegendPill}><Text style={styles.mapLegendText}>{activeItems.length} ACTIVE</Text></View>
+                </View>
+
+                <View style={styles.weekStrip}>
+                  {protocolMap.map((day) => (
+                    <View key={day.key} style={[styles.dayColumn, day.today && styles.dayColumnToday]}>
+                      <Text style={[styles.mapDayLabel, day.today && styles.mapDayLabelToday]}>{day.label}</Text>
+                      <Text style={[styles.mapDayNumber, day.today && styles.mapDayNumberToday]}>{day.day}</Text>
+                      <View style={styles.loadTrack}>
+                        <View style={[styles.loadFill, { height: Math.min(30, Math.max(4, day.due.length * 8)) }, day.due.length === 0 && styles.loadFillEmpty]} />
+                      </View>
+                      <Text style={[styles.mapCount, day.due.length > 0 && styles.mapCountActive]}>{day.due.length}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.mapScheduleList}>
+                  {protocolMap.filter((day) => day.due.length > 0).slice(0, 4).map((day, index) => (
+                    <View key={day.key} style={[styles.mapScheduleRow, index > 0 && styles.mapScheduleDivider]}>
+                      <View style={styles.mapScheduleDay}>
+                        <Text style={styles.mapScheduleDayText}>{day.label}</Text>
+                        <Text style={styles.mapScheduleDate}>{day.day}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.mapScheduleItems} numberOfLines={1}>{day.due.map((item) => item.name).join(' · ')}</Text>
+                        <Text style={styles.mapScheduleMeta}>{day.due.length} scheduled{day.firstTime ? ` · first at ${day.firstTime}` : ''}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
 
             {activeProtocol && !showBuilder ? (
               <Pressable style={styles.addItemLaunch} onPress={() => { setBuilderStep(1); setShowBuilder(true); }}>
@@ -338,6 +397,31 @@ const styles = StyleSheet.create({
   protocolRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm },
   activateButton: { borderRadius: radius.md, backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentBorder, paddingHorizontal: 12, paddingVertical: 9 },
   activateText: { color: colors.accent, fontWeight: '900', fontSize: 10, letterSpacing: .7 },
+  mapCard: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.accentBorder, marginBottom: spacing.md },
+  mapHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  mapTitle: { color: colors.text, fontSize: 22, fontWeight: '900', marginTop: 4, letterSpacing: -.5 },
+  mapLegendPill: { backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentBorder, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 6 },
+  mapLegendText: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+  weekStrip: { flexDirection: 'row', justifyContent: 'space-between', gap: 5, marginTop: spacing.lg },
+  dayColumn: { flex: 1, alignItems: 'center', borderRadius: radius.md, paddingVertical: 9, paddingHorizontal: 2, backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border },
+  dayColumnToday: { backgroundColor: colors.accentSoft, borderColor: colors.accentBorder },
+  mapDayLabel: { color: colors.subtle, fontSize: 8, fontWeight: '900', letterSpacing: .7 },
+  mapDayLabelToday: { color: colors.accent },
+  mapDayNumber: { color: colors.text, fontSize: 16, lineHeight: 20, fontWeight: '900', marginTop: 2, fontVariant: ['tabular-nums'] },
+  mapDayNumberToday: { color: colors.accent },
+  loadTrack: { height: 34, width: 5, justifyContent: 'flex-end', backgroundColor: colors.border, borderRadius: radius.pill, overflow: 'hidden', marginTop: 7 },
+  loadFill: { width: '100%', backgroundColor: colors.accent, borderRadius: radius.pill },
+  loadFillEmpty: { height: 2, backgroundColor: colors.subtle },
+  mapCount: { color: colors.subtle, fontSize: 9, fontWeight: '900', marginTop: 5, fontVariant: ['tabular-nums'] },
+  mapCountActive: { color: colors.accent },
+  mapScheduleList: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
+  mapScheduleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: 11 },
+  mapScheduleDivider: { borderTopWidth: 1, borderTopColor: colors.border },
+  mapScheduleDay: { width: 38, alignItems: 'center' },
+  mapScheduleDayText: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: .8 },
+  mapScheduleDate: { color: colors.text, fontSize: 18, lineHeight: 22, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  mapScheduleItems: { color: colors.text, fontSize: 13, fontWeight: '800' },
+  mapScheduleMeta: { color: colors.muted, fontSize: 10, marginTop: 3, fontVariant: ['tabular-nums'] },
   addItemLaunch: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.bgElevated, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.xl },
   addIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentBorder },
   addIconText: { color: colors.accent, fontSize: 23, lineHeight: 27 },
