@@ -138,11 +138,16 @@ export default function YouScreen() {
         <Text style={styles.title}>You</Text>
         <Text style={styles.body}>Control what Pulse stores on this device and what appears on your lock screen.</Text>
 
-        <View style={styles.card}>
-          <Text style={styles.label}>SIGNED IN AS</Text>
-          <Text style={styles.value}>{session?.user.email ?? 'Pulse user'}</Text>
+        <View style={styles.profileCard}>
+          <View style={styles.avatar}><Text style={styles.avatarText}>{(session?.user.email ?? 'P').slice(0, 1).toUpperCase()}</Text></View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.label}>SIGNED IN AS</Text>
+            <Text style={styles.value}>{session?.user.email ?? 'Pulse user'}</Text>
+          </View>
+          <View style={styles.securePill}><Text style={styles.secureText}>SECURE</Text></View>
         </View>
 
+        <Text style={styles.sectionLabel}>PRIVACY & REMINDERS</Text>
         <View style={styles.card}>
           <SettingRow
             title="Biometric app lock"
@@ -167,6 +172,7 @@ export default function YouScreen() {
           />
         </View>
 
+        <Text style={styles.sectionLabel}>YOUR DATA</Text>
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Data controls</Text>
           <Text style={styles.detail}>Your Pulse data belongs to you. Export a portable JSON copy or permanently delete your account and synced data.</Text>
@@ -176,6 +182,11 @@ export default function YouScreen() {
           <Pressable style={styles.deleteButton} disabled={busy} onPress={confirmDeleteAccount}>
             <Text style={styles.deleteButtonText}>DELETE ACCOUNT & DATA</Text>
           </Pressable>
+        </View>
+
+        <View style={styles.aboutRow}>
+          <Text style={styles.aboutText}>Pulse 2.0</Text>
+          <Text style={styles.aboutText}>Science By Hugs</Text>
         </View>
 
         <Pressable style={styles.signOut} onPress={() => void signOut()}><Text style={styles.signOutText}>SIGN OUT</Text></Pressable>
@@ -204,11 +215,17 @@ function SettingRow({ title, detail, value, disabled, onValueChange }: {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  page: { padding: spacing.lg, paddingBottom: 42 },
+  page: { padding: spacing.lg, paddingBottom: 118 },
   eyebrow: { color: colors.accent, fontSize: 11, fontWeight: '900', letterSpacing: 1.8, marginTop: spacing.md },
-  title: { color: colors.text, fontSize: type.hero, fontWeight: '800', letterSpacing: -1, marginTop: spacing.sm },
+  title: { color: colors.text, fontSize: type.hero, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
   body: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.xl },
-  card: { backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.sm },
+  profileCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.xl },
+  avatar: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentBorder, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: colors.accent, fontSize: 18, fontWeight: '900' },
+  securePill: { borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 6, backgroundColor: colors.accentSoft },
+  secureText: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: .8 },
+  sectionLabel: { color: colors.subtle, fontSize: 10, fontWeight: '900', letterSpacing: 1.4, marginTop: spacing.sm, marginBottom: spacing.sm },
+  card: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.lg },
   label: { color: colors.muted, fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
   value: { color: colors.text, fontSize: 16, fontWeight: '800', marginTop: 6 },
   settingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
@@ -220,6 +237,8 @@ const styles = StyleSheet.create({
   dataButtonText: { color: colors.accent, fontWeight: '900', letterSpacing: .8 },
   deleteButton: { borderWidth: 1, borderColor: '#6f3030', borderRadius: radius.md, paddingVertical: 13, alignItems: 'center', marginTop: spacing.sm },
   deleteButtonText: { color: '#ff9b9b', fontWeight: '900', letterSpacing: .8 },
-  signOut: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: 15, alignItems: 'center', marginTop: spacing.md },
+  aboutRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.sm, paddingHorizontal: 2 },
+  aboutText: { color: colors.subtle, fontSize: 11 },
+  signOut: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: 15, alignItems: 'center', marginTop: spacing.xl },
   signOutText: { color: colors.text, fontWeight: '900', letterSpacing: 1 }
 });

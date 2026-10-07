@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "scheme": "pulse",
     "userInterfaceStyle": "dark",
-    
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sciencebyhugs.pulse",
@@ -69,15 +68,6 @@
           "experimental": {
             "ios": {
               "appExtensions": [
-                {
-                  "targetName": "ExpoWidgetsTarget",
-                  "bundleIdentifier": "com.sciencebyhugs.pulse.ExpoWidgetsTarget",
-                  "entitlements": {
-                    "com.apple.security.application-groups": [
-                      "group.com.sciencebyhugs.pulse"
-                    ]
-                  }
-                },
                 {
                   "targetName": "ExpoWidgetsTarget",
                   "bundleIdentifier": "com.sciencebyhugs.pulse.ExpoWidgetsTarget",

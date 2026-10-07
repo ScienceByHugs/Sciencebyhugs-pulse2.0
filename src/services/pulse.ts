@@ -203,15 +203,17 @@ export async function flushQuickLogOutbox() {
     try {
       const { error } = await sendQuickLog(payload);
       if (error) {
-        // Keep every failed entry unless we know the server accepted it.
-        // The RPC is idempotent via clientEventId, so retrying is safer than
-        // silently discarding a user's administration history.
-        break;
+        // Keep a rejected entry for a future retry, but continue attempting
+        // later entries so one malformed/stale record cannot block the queue.
+        continue;
       }
       await removeQuickLog(payload.clientEventId);
       flushed += 1;
-    } catch {
-      break;
+    } catch (error) {
+      // A thrown network failure means the connection is unavailable; stop
+      // here and leave the remaining queue untouched.
+      if (isNetworkError(error)) break;
+      continue;
     }
   }
 
