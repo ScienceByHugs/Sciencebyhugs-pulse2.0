@@ -84,10 +84,19 @@ export default function TodayScreen() {
       const inventory = item.inventory_containers?.find((container) => container.is_active);
       return inventory ? inventory.remaining_amount <= inventory.low_threshold : false;
     }).length;
-    const nextTime = items.length ? timeLabel(scheduleTime(items[0]?.schedule ?? {})) : 'CLEAR';
-    const scheduled = items.filter((item) => Boolean(scheduleTime(item.schedule))).length;
-    return { lowSupply, nextTime, scheduled };
-  }, [allItems, items]);
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const timedItems = items
+      .map((item) => ({ item, time: scheduleTime(item.schedule) }))
+      .filter((entry): entry is { item: TodayItem; time: string } => Boolean(entry.time));
+    const upcoming = timedItems.find(({ time }) => {
+      const [hour = '0', minute = '0'] = time.split(':');
+      return Number(hour) * 60 + Number(minute) >= currentMinutes;
+    });
+    const untimedRemaining = items.some((item) => !scheduleTime(item.schedule) && !completion.completedIds.has(item.id));
+    const nextTime = upcoming ? timeLabel(upcoming.time) : untimedRemaining ? 'ANY TIME' : items.length ? 'COMPLETE' : 'CLEAR';
+    return { lowSupply, nextTime, scheduled: timedItems.length };
+  }, [allItems, items, completion.completedIds]);
 
   function cycleSite(item: TodayItem) {
     const options = sitesForRoute(item.route);
