@@ -11,7 +11,8 @@
       "bundleIdentifier": "com.sciencebyhugs.pulse",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "icon": "./assets/icon.png"
     },
     "android": {
       "package": "com.sciencebyhugs.pulse",
@@ -84,6 +85,7 @@
         "projectId": "3bf7a227-b831-426f-a31c-768e22c620a9"
       }
     },
-    "owner": "sciencebyhugss-team"
+    "owner": "sciencebyhugss-team",
+    "icon": "./assets/icon.png"
   }
 }
