@@ -59,6 +59,16 @@ export default function TodayScreen() {
     [allItems]
   );
 
+  const dayBrief = useMemo(() => {
+    const lowSupply = allItems.filter((item) => {
+      const inventory = item.inventory_containers?.find((container) => container.is_active);
+      return inventory ? inventory.remaining_amount <= inventory.low_threshold : false;
+    }).length;
+    const nextTime = items.length ? timeLabel(scheduleTime(items[0]?.schedule ?? {})) : 'CLEAR';
+    const scheduled = items.filter((item) => Boolean(scheduleTime(item.schedule))).length;
+    return { lowSupply, nextTime, scheduled };
+  }, [allItems, items]);
+
   function cycleSite(item: TodayItem) {
     const options = sitesForRoute(item.route);
     if (!options.length) return;
@@ -117,6 +127,34 @@ export default function TodayScreen() {
             <View style={styles.summaryCell}><Text style={styles.summaryNumber}>{items.length}</Text><Text style={styles.summaryLabel}>DUE TODAY</Text></View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryCell}><Text style={styles.summaryNumber}>{allItems.length}</Text><Text style={styles.summaryLabel}>ACTIVE ITEMS</Text></View>
+          </View>
+
+          <View style={styles.briefCard}>
+            <View style={styles.briefHeader}>
+              <View>
+                <Text style={styles.briefEyebrow}>PULSE BRIEF</Text>
+                <Text style={styles.briefTitle}>{items.length ? 'Your day is in motion.' : 'Your schedule is clear.'}</Text>
+              </View>
+              <View style={[styles.briefStatus, items.length === 0 && styles.briefStatusClear]}>
+                <Text style={styles.briefStatusText}>{items.length ? 'ACTIVE' : 'CLEAR'}</Text>
+              </View>
+            </View>
+            <View style={styles.briefSignals}>
+              <View style={styles.briefSignal}>
+                <Text style={styles.briefValue}>{dayBrief.nextTime}</Text>
+                <Text style={styles.briefLabel}>NEXT WINDOW</Text>
+              </View>
+              <View style={styles.briefSignalDivider} />
+              <View style={styles.briefSignal}>
+                <Text style={styles.briefValue}>{dayBrief.scheduled}</Text>
+                <Text style={styles.briefLabel}>TIMED ITEMS</Text>
+              </View>
+              <View style={styles.briefSignalDivider} />
+              <View style={styles.briefSignal}>
+                <Text style={[styles.briefValue, dayBrief.lowSupply > 0 && styles.briefWarning]}>{dayBrief.lowSupply}</Text>
+                <Text style={styles.briefLabel}>LOW SUPPLY</Text>
+              </View>
+            </View>
           </View>
         </View>
 
@@ -191,6 +229,19 @@ const styles = StyleSheet.create({
   livePill: { borderRadius: 999, borderWidth: 1, borderColor: colors.accentBorder, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.accentSoft },
   liveText: { color: colors.accent, fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
   heroHeader: { marginBottom: spacing.lg },
+  briefCard: { marginTop: spacing.md, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.accentBorder, borderRadius: radius.xl, padding: spacing.md },
+  briefHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
+  briefEyebrow: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1.4 },
+  briefTitle: { color: colors.text, fontSize: 15, fontWeight: '800', marginTop: 3 },
+  briefStatus: { backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentBorder, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5 },
+  briefStatusClear: { opacity: .72 },
+  briefStatusText: { color: colors.accent, fontSize: 8, fontWeight: '900', letterSpacing: .9 },
+  briefSignals: { flexDirection: 'row', alignItems: 'stretch', marginTop: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
+  briefSignal: { flex: 1, minWidth: 0 },
+  briefSignalDivider: { width: 1, backgroundColor: colors.border, marginHorizontal: 8 },
+  briefValue: { color: colors.text, fontSize: 13, lineHeight: 18, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  briefWarning: { color: colors.warning },
+  briefLabel: { color: colors.subtle, fontSize: 7, fontWeight: '900', letterSpacing: .9, marginTop: 2 },
   greeting: { color: colors.text, fontSize: type.hero, fontWeight: '700', letterSpacing: -1.6, lineHeight: 44, maxWidth: 320 },
   accentWord: { color: colors.accent },
   date: { color: colors.muted, fontSize: 14, marginTop: spacing.sm, marginBottom: spacing.lg },
