@@ -1,6 +1,6 @@
 import { Host, Icon } from '@expo/ui';
 import { Redirect, Tabs } from 'expo-router';
-import { ActivityIndicator, SafeAreaView } from 'react-native';
+import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View, type ColorValue } from 'react-native';
 import { useAuth } from '@/providers/AuthProvider';
 import { colors } from '@/theme';
 
@@ -27,13 +27,23 @@ const tabIcons = {
   })
 } as const;
 
-function TabIcon({ routeName, color }: { routeName: string; color: any }) {
+function TabIcon({ routeName, color, focused }: { routeName: string; color: ColorValue; focused: boolean }) {
   const name = tabIcons[routeName as keyof typeof tabIcons] ?? tabIcons.index;
   return (
-    <Host matchContents>
-      <Icon name={name} size={19} color={color} />
-    </Host>
+    <View style={styles.iconShell}>
+      {focused ? <View style={styles.signalHalo} /> : null}
+      <View style={[styles.iconCore, focused && styles.iconCoreActive]}>
+        <Host matchContents>
+          <Icon name={name} size={18} color={color} />
+        </Host>
+      </View>
+      <View style={[styles.signalNode, focused && styles.signalNodeActive]} />
+    </View>
   );
+}
+
+function TabLabel({ label, focused, color }: { label: string; focused: boolean; color: ColorValue }) {
+  return <Text style={[styles.tabLabel, { color }, focused && styles.tabLabelActive]}>{label.toUpperCase()}</Text>;
 }
 
 export default function TabsLayout() {
@@ -56,17 +66,17 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.subtle,
         tabBarHideOnKeyboard: true,
-        tabBarIcon: ({ color }) => <TabIcon routeName={route.name} color={color} />,
+        tabBarIcon: ({ color, focused }) => <TabIcon routeName={route.name} color={color} focused={focused} />,
+        tabBarLabel: ({ color, focused }) => <TabLabel label={({ index: 'Today', protocol: 'Protocol', log: 'Timeline', insights: 'Insights', you: 'You' } as Record<string, string>)[route.name] ?? route.name} focused={focused} color={color} />,
         tabBarStyle: {
           position: 'absolute',
-          backgroundColor: '#08131E',
+          backgroundColor: colors.bgElevated,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: 84,
-          paddingTop: 8,
-          paddingBottom: 14
-        },
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '800', letterSpacing: 0.2 }
+          height: 88,
+          paddingTop: 7,
+          paddingBottom: 12
+        }
       })}
     >
       <Tabs.Screen name="index" options={{ title: 'Today' }} />
@@ -77,3 +87,14 @@ export default function TabsLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  iconShell: { width: 42, height: 34, alignItems: 'center', justifyContent: 'center' },
+  signalHalo: { position: 'absolute', top: 1, width: 34, height: 26, borderRadius: 13, backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentBorder },
+  iconCore: { width: 26, height: 24, alignItems: 'center', justifyContent: 'center', opacity: .78 },
+  iconCoreActive: { opacity: 1 },
+  signalNode: { position: 'absolute', bottom: 0, width: 3, height: 3, borderRadius: 2, backgroundColor: colors.border },
+  signalNodeActive: { width: 13, backgroundColor: colors.accent },
+  tabLabel: { fontSize: 8, fontWeight: '800', letterSpacing: .75, marginTop: 1 },
+  tabLabelActive: { fontWeight: '900' }
+});
