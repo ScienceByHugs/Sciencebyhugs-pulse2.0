@@ -101,8 +101,15 @@ export default function TodayScreen() {
           <View style={styles.livePill}><Text style={styles.liveText}>LIVE</Text></View>
         </View>
 
-        <Text style={styles.greeting}>Today.</Text>
-        <Text style={styles.date}>{dateLabel}</Text>
+        <View style={styles.heroHeader}>
+          <Text style={styles.greeting}>Your day,<Text style={styles.accentWord}> simplified.</Text></Text>
+          <Text style={styles.date}>{dateLabel}</Text>
+          <View style={styles.summaryRow}>
+            <View style={styles.summaryCell}><Text style={styles.summaryNumber}>{items.length}</Text><Text style={styles.summaryLabel}>DUE TODAY</Text></View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryCell}><Text style={styles.summaryNumber}>{allItems.length}</Text><Text style={styles.summaryLabel}>ACTIVE ITEMS</Text></View>
+          </View>
+        </View>
 
         {loading && allItems.length === 0 ? <ActivityIndicator color={colors.accent} style={{ marginTop: 32 }} /> : null}
 
@@ -168,16 +175,23 @@ export default function TodayScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  page: { padding: spacing.lg, paddingBottom: 40, gap: spacing.sm },
-  brandRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg },
+  page: { padding: spacing.lg, paddingBottom: 118, gap: spacing.sm },
+  brandRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xl, paddingTop: spacing.sm },
   eyebrow: { color: colors.muted, fontSize: 10, letterSpacing: 2.4, fontWeight: '700' },
-  logo: { color: colors.text, fontSize: 28, letterSpacing: 6, fontWeight: '800' },
+  logo: { color: colors.text, fontSize: 24, letterSpacing: 7, fontWeight: '900' },
   livePill: { borderRadius: 999, borderWidth: 1, borderColor: colors.accentBorder, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.accentSoft },
   liveText: { color: colors.accent, fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
-  greeting: { color: colors.text, fontSize: type.hero, fontWeight: '700', letterSpacing: -1 },
-  date: { color: colors.muted, fontSize: 14, marginBottom: spacing.md },
+  heroHeader: { marginBottom: spacing.lg },
+  greeting: { color: colors.text, fontSize: type.hero, fontWeight: '700', letterSpacing: -1.6, lineHeight: 44, maxWidth: 320 },
+  accentWord: { color: colors.accent },
+  date: { color: colors.muted, fontSize: 14, marginTop: spacing.sm, marginBottom: spacing.lg },
+  summaryRow: { flexDirection: 'row', backgroundColor: colors.bgElevated, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, paddingVertical: 15 },
+  summaryCell: { flex: 1, paddingHorizontal: spacing.md },
+  summaryNumber: { color: colors.text, fontSize: 22, fontWeight: '800' },
+  summaryLabel: { color: colors.subtle, fontSize: 9, fontWeight: '900', letterSpacing: 1.2, marginTop: 3 },
+  summaryDivider: { width: 1, backgroundColor: colors.border },
   sectionLabel: { color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1.8, marginTop: spacing.md, marginBottom: 2 },
-  heroCard: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.accentBorder, gap: spacing.md },
+  heroCard: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.md },
   lowCard: { borderColor: '#8f6b3d' },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md },
   medName: { color: colors.text, fontSize: 22, fontWeight: '700' },
@@ -191,7 +205,7 @@ const styles = StyleSheet.create({
   inventoryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
   inventoryText: { color: colors.muted, fontSize: 12 },
   lowText: { color: '#f6bd75', fontWeight: '900' },
-  primaryButton: { backgroundColor: colors.accent, borderRadius: radius.md, paddingVertical: 15, alignItems: 'center' },
+  primaryButton: { backgroundColor: colors.accent, borderRadius: radius.md, paddingVertical: 16, alignItems: 'center', marginTop: 2 },
   primaryButtonText: { color: '#03111f', fontWeight: '900', letterSpacing: 1.1 },
   emptyCard: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, marginTop: spacing.lg },
   cardTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
