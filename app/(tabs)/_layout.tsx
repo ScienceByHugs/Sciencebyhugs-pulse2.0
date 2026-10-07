@@ -20,7 +20,7 @@ const fallbacks: Record<string, string> = {
   you: '○'
 };
 
-function TabIcon({ routeName, color }: { routeName: string; color: string }) {
+function TabIcon({ routeName, color }: { routeName: string; color: any }) {
   if (Platform.OS === 'ios') {
     const name = sfSymbols[routeName as keyof typeof sfSymbols] ?? 'circle.fill';
     return (
