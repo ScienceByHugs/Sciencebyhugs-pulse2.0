@@ -3,7 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, radius, spacing, type } from '@/theme';
 import { createProtocol, createProtocolItem, listProtocolItems, listProtocols, updateProtocolStatus, type TodayItem } from '@/services/pulse';
-import { formatSchedule, isDueOnDate, scheduleTime } from '@/domain/schedule';
+import { formatSchedule, isDueOnDate, localDateKey, scheduleTime } from '@/domain/schedule';
 
 type Protocol = { id: string; name: string; status: string };
 const ROUTES = ['subcutaneous', 'intramuscular', 'oral', 'topical', 'other'] as const;
@@ -39,7 +39,7 @@ export default function ProtocolScreen() {
       date.setDate(date.getDate() + offset);
       const due = activeItems.filter((item) => isDueOnDate(item.schedule, date));
       return {
-        key: date.toISOString().slice(0, 10),
+        key: localDateKey(date),
         label: formatter.format(date).slice(0, 3).toUpperCase(),
         day: date.getDate(),
         today: offset === 0,

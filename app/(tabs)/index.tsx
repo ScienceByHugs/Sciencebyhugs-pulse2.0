@@ -3,7 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import { ActivityIndicator, Alert, Animated, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, type } from '@/theme';
 import { flushQuickLogOutbox, listDoseLogs, listRecentSites, listTodayItems, quickLog, type TimelineEntry, type TodayItem } from '@/services/pulse';
-import { isDueOnDate, scheduleTime } from '@/domain/schedule';
+import { isDueOnDate, localDayRange, nextScheduledTimeToday, scheduleTime } from '@/domain/schedule';
 import { sitesForRoute, suggestSite } from '@/domain/sites';
 import { rescheduleReminders } from '@/lib/reminders';
 import { updatePulseTodayWidget } from '@/lib/widgets';
@@ -63,10 +63,7 @@ export default function TodayScreen() {
   );
 
   const completion = useMemo(() => {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 1);
+    const { start, end } = localDayRange();
     const completedIds = new Set(todayLogs.filter((entry) => {
       const logged = new Date(entry.logged_at);
       return logged >= start && logged < end && entry.protocol_item_id;
@@ -85,17 +82,10 @@ export default function TodayScreen() {
       const inventory = item.inventory_containers?.find((container) => container.is_active);
       return inventory ? inventory.remaining_amount <= inventory.low_threshold : false;
     }).length;
-    const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    const timedItems = items
-      .map((item) => ({ item, time: scheduleTime(item.schedule) }))
-      .filter((entry): entry is { item: TodayItem; time: string } => Boolean(entry.time));
-    const upcoming = timedItems.find(({ time }) => {
-      const [hour = '0', minute = '0'] = time.split(':');
-      return Number(hour) * 60 + Number(minute) >= currentMinutes;
-    });
+    const timedItems = items.filter((item) => Boolean(scheduleTime(item.schedule)));
+    const upcoming = nextScheduledTimeToday(items.map((item) => item.schedule));
     const untimedRemaining = items.some((item) => !scheduleTime(item.schedule) && !completion.completedIds.has(item.id));
-    const nextTime = upcoming ? timeLabel(upcoming.time) : untimedRemaining ? 'ANY TIME' : items.length ? 'COMPLETE' : 'CLEAR';
+    const nextTime = upcoming ? timeLabel(upcoming) : untimedRemaining ? 'ANY TIME' : items.length ? 'COMPLETE' : 'CLEAR';
     return { lowSupply, nextTime, scheduled: timedItems.length };
   }, [allItems, items, completion.completedIds]);
 

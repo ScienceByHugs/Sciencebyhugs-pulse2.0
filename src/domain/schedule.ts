@@ -90,3 +90,29 @@ export function formatSchedule(schedule: Record<string, unknown>) {
   if (type === 'cycle') return `${schedule.onDays ?? 1} on / ${schedule.offDays ?? 0} off${time ? ` · ${time}` : ''}`;
   return 'As needed';
 }
+
+export function localDateKey(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+export function localDayRange(date = new Date()) {
+  const start = dateOnly(date);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start, end };
+}
+
+export function nextScheduledTimeToday(schedules: Record<string, unknown>[], now = new Date()) {
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  return schedules
+    .map(scheduleTime)
+    .filter((time): time is string => Boolean(time))
+    .sort()
+    .find((time) => {
+      const [hour = '0', minute = '0'] = time.split(':');
+      return Number(hour) * 60 + Number(minute) >= currentMinutes;
+    });
+}
