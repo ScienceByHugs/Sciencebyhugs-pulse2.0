@@ -22,7 +22,8 @@
       "permissions": [
         "android.permission.USE_BIOMETRIC",
         "android.permission.USE_FINGERPRINT"
-      ]
+      ],
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "bundler": "metro"
@@ -86,6 +87,15 @@
       }
     },
     "owner": "sciencebyhugss-team",
-    "icon": "./assets/icon.png"
+    "icon": "./assets/icon.png",
+    "androidStatusBar": {
+      "backgroundColor": "#050A10",
+      "barStyle": "light-content",
+      "translucent": false
+    },
+    "androidNavigationBar": {
+      "backgroundColor": "#050A10",
+      "barStyle": "light-content"
+    }
   }
 }

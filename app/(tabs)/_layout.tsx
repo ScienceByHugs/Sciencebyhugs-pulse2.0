@@ -1,36 +1,39 @@
 import { Host, Icon } from '@expo/ui';
 import { Redirect, Tabs } from 'expo-router';
-import { ActivityIndicator, Platform, SafeAreaView, Text } from 'react-native';
+import { ActivityIndicator, SafeAreaView } from 'react-native';
 import { useAuth } from '@/providers/AuthProvider';
 import { colors } from '@/theme';
 
-const sfSymbols = {
-  index: 'house.fill',
-  protocol: 'list.bullet.rectangle.fill',
-  log: 'clock.fill',
-  insights: 'chart.bar.fill',
-  you: 'person.crop.circle.fill'
+const tabIcons = {
+  index: Icon.select({
+    ios: 'house.fill',
+    android: require('../../assets/icons/today.xml')
+  }),
+  protocol: Icon.select({
+    ios: 'list.bullet.rectangle.fill',
+    android: require('../../assets/icons/protocol.xml')
+  }),
+  log: Icon.select({
+    ios: 'clock.fill',
+    android: require('../../assets/icons/timeline.xml')
+  }),
+  insights: Icon.select({
+    ios: 'chart.bar.fill',
+    android: require('../../assets/icons/insights.xml')
+  }),
+  you: Icon.select({
+    ios: 'person.crop.circle.fill',
+    android: require('../../assets/icons/you.xml')
+  })
 } as const;
 
-const fallbacks: Record<string, string> = {
-  index: '⌂',
-  protocol: '▤',
-  log: '◷',
-  insights: '⌁',
-  you: '○'
-};
-
 function TabIcon({ routeName, color }: { routeName: string; color: any }) {
-  if (Platform.OS === 'ios') {
-    const name = sfSymbols[routeName as keyof typeof sfSymbols] ?? 'circle.fill';
-    return (
-      <Host matchContents>
-        <Icon name={name as any} size={19} color={color} />
-      </Host>
-    );
-  }
-
-  return <Text style={{ color, fontSize: 18, fontWeight: '700' }}>{fallbacks[routeName] ?? '·'}</Text>;
+  const name = tabIcons[routeName as keyof typeof tabIcons] ?? tabIcons.index;
+  return (
+    <Host matchContents>
+      <Icon name={name} size={19} color={color} />
+    </Host>
+  );
 }
 
 export default function TabsLayout() {
