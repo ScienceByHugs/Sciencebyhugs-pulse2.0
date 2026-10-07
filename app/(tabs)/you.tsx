@@ -23,6 +23,9 @@ export default function YouScreen() {
   const [reminders, setReminders] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  const shieldCount = [biometricLock, privateNotifications, reminders].filter(Boolean).length;
+  const shieldPercent = Math.round((shieldCount / 3) * 100);
+
   const load = useCallback(async () => {
     const [lock, privateMode, reminderMode] = await Promise.all([
       getBiometricLockEnabled(),
@@ -138,6 +141,31 @@ export default function YouScreen() {
         <Text style={styles.title}>You</Text>
         <Text style={styles.body}>Control what Pulse stores on this device and what appears on your lock screen.</Text>
 
+        <View style={styles.shieldCard}>
+          <View style={styles.shieldTop}>
+            <View>
+              <Text style={styles.shieldEyebrow}>PRIVACY SHIELD</Text>
+              <Text style={styles.shieldTitle}>{shieldCount === 3 ? 'Fully engaged' : shieldCount === 0 ? 'Minimal protection' : 'Partially engaged'}</Text>
+            </View>
+            <Text style={styles.shieldPercent}>{shieldPercent}%</Text>
+          </View>
+          <View style={styles.shieldTrack}><View style={[styles.shieldFill, { width: `${shieldPercent}%` as `${number}%` }]} /></View>
+          <View style={styles.shieldGrid}>
+            <View style={styles.shieldSignal}>
+              <View style={[styles.shieldDot, biometricLock && styles.shieldDotActive]} />
+              <Text style={[styles.shieldSignalText, biometricLock && styles.shieldSignalTextActive]}>BIOMETRIC</Text>
+            </View>
+            <View style={styles.shieldSignal}>
+              <View style={[styles.shieldDot, privateNotifications && styles.shieldDotActive]} />
+              <Text style={[styles.shieldSignalText, privateNotifications && styles.shieldSignalTextActive]}>PRIVATE TEXT</Text>
+            </View>
+            <View style={styles.shieldSignal}>
+              <View style={[styles.shieldDot, reminders && styles.shieldDotActive]} />
+              <Text style={[styles.shieldSignalText, reminders && styles.shieldSignalTextActive]}>REMINDERS</Text>
+            </View>
+          </View>
+        </View>
+
         <View style={styles.profileCard}>
           <View style={styles.avatar}><Text style={styles.avatarText}>{(session?.user.email ?? 'P').slice(0, 1).toUpperCase()}</Text></View>
           <View style={{ flex: 1 }}>
@@ -219,6 +247,19 @@ const styles = StyleSheet.create({
   eyebrow: { color: colors.accent, fontSize: 11, fontWeight: '900', letterSpacing: 1.8, marginTop: spacing.md },
   title: { color: colors.text, fontSize: type.hero, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
   body: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.xl },
+  shieldCard: { backgroundColor: colors.bgElevated, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.accentBorder, marginBottom: spacing.md },
+  shieldTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md },
+  shieldEyebrow: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1.5 },
+  shieldTitle: { color: colors.text, fontSize: 20, fontWeight: '900', marginTop: 4 },
+  shieldPercent: { color: colors.accent, fontSize: 28, lineHeight: 32, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  shieldTrack: { height: 5, backgroundColor: colors.border, borderRadius: radius.pill, overflow: 'hidden', marginTop: spacing.md },
+  shieldFill: { height: '100%', backgroundColor: colors.accent, borderRadius: radius.pill },
+  shieldGrid: { flexDirection: 'row', gap: 7, marginTop: spacing.md },
+  shieldSignal: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.panel, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingVertical: 10, paddingHorizontal: 5 },
+  shieldDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.subtle, marginBottom: 6 },
+  shieldDotActive: { backgroundColor: colors.success },
+  shieldSignalText: { color: colors.subtle, fontSize: 7, fontWeight: '900', letterSpacing: .7, textAlign: 'center' },
+  shieldSignalTextActive: { color: colors.text },
   profileCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.xl },
   avatar: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentBorder, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: colors.accent, fontSize: 18, fontWeight: '900' },
