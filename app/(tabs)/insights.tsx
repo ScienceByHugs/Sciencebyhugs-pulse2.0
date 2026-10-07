@@ -123,20 +123,29 @@ export default function InsightsScreen() {
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderCopy}>
-              <Text style={styles.cardTitle}>Supply runway</Text>
+              <Text style={styles.signalEyebrow}>SUPPLY RESERVOIR</Text>
+              <Text style={styles.cardTitle}>What remains</Text>
               <Text style={styles.detail}>A forecast from the inventory and dose values you entered.</Text>
             </View>
             {nextSupply ? <Text style={styles.sectionCount}>{supply.length}</Text> : null}
           </View>
           {supply.length ? supply.slice(0, 3).map((item, index) => (
             <View key={item.name} style={[styles.supplyRow, index > 0 && styles.supplyDivider]}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.value}>{item.name}</Text>
-                <Text style={styles.detail}>{item.remaining} {item.unit} · ~{item.dosesRemaining} doses</Text>
+              <View style={styles.supplyIdentity}>
+                <Text style={styles.supplyName} numberOfLines={1}>{item.name}</Text>
+                <Text style={styles.supplyAmount}>{item.remaining} {item.unit}</Text>
               </View>
-              <Text style={[styles.forecast, item.projectedLowInDays === 0 && styles.warningText]}>
-                {item.projectedLowInDays === null ? '365+ days' : item.projectedLowInDays === 0 ? 'LOW NOW' : `~${item.projectedLowInDays}d`}
-              </Text>
+              <View style={styles.reservoir}>
+                <View style={styles.reservoirRail}>
+                  <View style={[styles.reservoirFill, { width: `${Math.max(6, Math.min(100, item.dosesRemaining * 8))}%` as `${number}%` }, item.projectedLowInDays === 0 && styles.reservoirFillLow]} />
+                </View>
+                <View style={styles.supplyMeta}>
+                  <Text style={styles.supplyDose}>~{item.dosesRemaining} DOSES</Text>
+                  <Text style={[styles.forecast, item.projectedLowInDays === 0 && styles.warningText]}>
+                    {item.projectedLowInDays === null ? '365+D' : item.projectedLowInDays === 0 ? 'LOW NOW' : `~${item.projectedLowInDays}D`}
+                  </Text>
+                </View>
+              </View>
             </View>
           )) : <Text style={styles.detail}>Add inventory to a protocol item to enable supply forecasting.</Text>}
         </View>
@@ -212,7 +221,16 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
   sectionHeaderCopy: { flex: 1, minWidth: 0 },
   sectionCount: { color: colors.accent, backgroundColor: colors.accentSoft, minWidth: 30, textAlign: 'center', paddingHorizontal: 9, paddingVertical: 5, borderRadius: radius.pill, fontWeight: '900', fontVariant: ['tabular-nums'], alignSelf: 'flex-start' },
-  supplyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
+  supplyRow: { paddingVertical: spacing.md, gap: spacing.sm },
+  supplyIdentity: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.md },
+  supplyName: { flex: 1, color: colors.text, fontSize: 16, fontWeight: '900' },
+  supplyAmount: { color: colors.muted, fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  reservoir: { gap: 7 },
+  reservoirRail: { height: 8, backgroundColor: colors.bgElevated, borderRadius: radius.pill, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
+  reservoirFill: { height: '100%', backgroundColor: colors.accent, borderRadius: radius.pill },
+  reservoirFillLow: { backgroundColor: colors.warning },
+  supplyMeta: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  supplyDose: { color: colors.subtle, fontSize: 9, fontWeight: '900', letterSpacing: 1, fontVariant: ['tabular-nums'] },
   supplyDivider: { borderTopWidth: 1, borderTopColor: colors.border },
   warningText: { color: colors.warning },
   cardTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
