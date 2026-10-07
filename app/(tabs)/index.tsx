@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { ActivityIndicator, Alert, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, type } from '@/theme';
 import { flushQuickLogOutbox, listDoseLogs, listRecentSites, listTodayItems, quickLog, type TimelineEntry, type TodayItem } from '@/services/pulse';
 import { isDueOnDate, scheduleTime } from '@/domain/schedule';
@@ -24,6 +24,7 @@ export default function TodayScreen() {
   const [loading, setLoading] = useState(true);
   const [loggingId, setLoggingId] = useState<string | null>(null);
   const [recentLogAt, setRecentLogAt] = useState<Record<string, number>>({});
+  const completionPulse = useRef(new Animated.Value(0)).current;
 
   const load = useCallback(async () => {
     try {
@@ -114,6 +115,12 @@ export default function TodayScreen() {
       setLoggingId(item.id);
       const result = await quickLog(item, selectedSites[item.id]);
       const loggedAt = Date.now();
+      completionPulse.stopAnimation();
+      completionPulse.setValue(0);
+      Animated.sequence([
+        Animated.timing(completionPulse, { toValue: 1, duration: 180, useNativeDriver: true }),
+        Animated.timing(completionPulse, { toValue: 0, duration: 520, useNativeDriver: true })
+      ]).start();
       setRecentLogAt((current) => ({ ...current, [item.id]: loggedAt }));
       setTimeout(() => {
         setRecentLogAt((current) => {
@@ -150,6 +157,10 @@ export default function TodayScreen() {
         </View>
 
         <View style={styles.heroHeader}>
+          <Animated.View pointerEvents="none" style={[styles.completionPulse, {
+            opacity: completionPulse.interpolate({ inputRange: [0, 1], outputRange: [0, .24] }),
+            transform: [{ scale: completionPulse.interpolate({ inputRange: [0, 1], outputRange: [.72, 1.18] }) }]
+          }]} />
           <Text style={styles.greeting}>Your day,<Text style={styles.accentWord}> simplified.</Text></Text>
           <Text style={styles.date}>{dateLabel}</Text>
           <View style={styles.summaryRow}>
@@ -277,6 +288,7 @@ const styles = StyleSheet.create({
   logo: { color: colors.text, fontSize: 24, letterSpacing: 7, fontWeight: '900' },
   livePill: { borderRadius: 999, borderWidth: 1, borderColor: colors.accentBorder, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.accentSoft },
   liveText: { color: colors.accent, fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
+  completionPulse: { position: 'absolute', top: 86, alignSelf: 'center', width: 210, height: 210, borderRadius: 105, borderWidth: 1, borderColor: colors.accent },
   heroHeader: { marginBottom: spacing.lg },
   daySignalCard: { marginTop: spacing.md, backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.accentBorder, borderRadius: radius.xl, padding: spacing.md },
   daySignalHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
