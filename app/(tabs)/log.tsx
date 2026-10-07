@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, type } from '@/theme';
+import { localDateKey } from '@/domain/schedule';
 import { listDoseLogs, type TimelineEntry } from '@/services/pulse';
 
 function dayKey(value: string) {
@@ -34,7 +35,7 @@ export default function LogScreen() {
         return logged >= date && logged < next;
       }).length;
       return {
-        key: date.toISOString().slice(0, 10),
+        key: localDateKey(date),
         label: date.toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 1),
         count,
         today: index === 6
