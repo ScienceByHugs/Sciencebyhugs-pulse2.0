@@ -4,6 +4,7 @@ import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } fr
 import { colors, radius, spacing, type } from '@/theme';
 import { listDoseLogs, listTodayItems, type TimelineEntry, type TodayItem } from '@/services/pulse';
 import { calculateSevenDayConsistency, calculateSupplyForecast, siteRotationSummary } from '@/domain/insights';
+import { isDueOnDate } from '@/domain/schedule';
 
 export default function InsightsScreen() {
   const [items, setItems] = useState<TodayItem[]>([]);
@@ -33,6 +34,30 @@ export default function InsightsScreen() {
     if (!Number.isFinite(dose) || !Number.isFinite(strength) || dose <= 0 || strength <= 0) return null;
     return dose / strength;
   }, [intendedDose, concentration]);
+
+  const routineFingerprint = useMemo(() => {
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    return items.slice(0, 4).map((item) => ({
+      id: item.id,
+      name: item.name,
+      days: Array.from({ length: 7 }, (_, offset) => {
+        const date = new Date(today);
+        date.setDate(today.getDate() + offset);
+        return isDueOnDate(item.schedule, date);
+      })
+    }));
+  }, [items]);
+
+  const fingerprintLabels = useMemo(() => {
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    return Array.from({ length: 7 }, (_, offset) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() + offset);
+      return date.toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 1).toUpperCase();
+    });
+  }, []);
 
   const nextSupply = supply[0];
   const consistencyWidth = `${Math.max(0, Math.min(100, consistency.percent))}%` as `${number}%`;
@@ -68,6 +93,32 @@ export default function InsightsScreen() {
             <Text style={styles.metricDetail}>{rotation.administrations} site-tagged logs sampled.</Text>
           </View>
         </View>
+
+        {routineFingerprint.length ? (
+          <View style={styles.fingerprintCard}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderCopy}>
+                <Text style={styles.signalEyebrow}>ROUTINE FINGERPRINT</Text>
+                <Text style={styles.cardTitle}>Your next 7 days</Text>
+                <Text style={styles.detail}>Each signal shows when an active item is scheduled to appear.</Text>
+              </View>
+            </View>
+            <View style={styles.fingerprintHeaderRow}>
+              <View style={styles.fingerprintNameSpacer} />
+              {fingerprintLabels.map((label, index) => <Text key={`${label}-${index}`} style={styles.fingerprintDayLabel}>{label}</Text>)}
+            </View>
+            {routineFingerprint.map((item, rowIndex) => (
+              <View key={item.id} style={[styles.fingerprintRow, rowIndex > 0 && styles.fingerprintDivider]}>
+                <Text style={styles.fingerprintName} numberOfLines={1}>{item.name}</Text>
+                {item.days.map((active, index) => (
+                  <View key={`${item.id}-${index}`} style={[styles.fingerprintNode, active && styles.fingerprintNodeActive]}>
+                    {active ? <View style={styles.fingerprintCore} /> : null}
+                  </View>
+                ))}
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
@@ -146,6 +197,17 @@ const styles = StyleSheet.create({
   metricValue: { color: colors.text, fontSize: 28, fontWeight: '900', fontVariant: ['tabular-nums'], lineHeight: 32 },
   metricLabel: { color: colors.accent, fontSize: 12, fontWeight: '800', marginTop: 2 },
   metricDetail: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: 6 },
+  fingerprintCard: { backgroundColor: colors.bgElevated, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.accentBorder, marginBottom: spacing.sm },
+  signalEyebrow: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1.5, marginBottom: 5 },
+  fingerprintHeaderRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md, marginBottom: 5 },
+  fingerprintNameSpacer: { flex: 1.5 },
+  fingerprintDayLabel: { flex: 1, color: colors.subtle, textAlign: 'center', fontSize: 8, fontWeight: '900' },
+  fingerprintRow: { flexDirection: 'row', alignItems: 'center', minHeight: 42 },
+  fingerprintDivider: { borderTopWidth: 1, borderTopColor: colors.border },
+  fingerprintName: { flex: 1.5, color: colors.text, fontSize: 11, fontWeight: '800', paddingRight: 8 },
+  fingerprintNode: { flex: 1, height: 24, alignItems: 'center', justifyContent: 'center' },
+  fingerprintNodeActive: { opacity: 1 },
+  fingerprintCore: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.accent, borderWidth: 2, borderColor: colors.accentSoft },
   card: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, marginTop: spacing.sm },
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
   sectionHeaderCopy: { flex: 1, minWidth: 0 },
