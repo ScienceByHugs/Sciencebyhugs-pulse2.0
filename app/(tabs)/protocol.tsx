@@ -26,6 +26,8 @@ export default function ProtocolScreen() {
   const [offDays, setOffDays] = useState('2');
   const [inventory, setInventory] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showBuilder, setShowBuilder] = useState(false);
+  const [builderStep, setBuilderStep] = useState<1 | 2 | 3>(1);
 
   const activeProtocol = useMemo(() => protocols.find((p) => p.status === 'active'), [protocols]);
 
@@ -108,6 +110,8 @@ export default function ProtocolScreen() {
       setItemName('');
       setDose('');
       setInventory('');
+      setShowBuilder(false);
+      setBuilderStep(1);
       await load();
     } catch (error) {
       Alert.alert('Could not add item', error instanceof Error ? error.message : 'Unknown error');
@@ -166,9 +170,46 @@ export default function ProtocolScreen() {
               </View>
             ))}
 
-            {activeProtocol ? (
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>Add an item</Text>
+            {activeProtocol && !showBuilder ? (
+              <Pressable style={styles.addItemLaunch} onPress={() => { setBuilderStep(1); setShowBuilder(true); }}>
+                <View style={styles.addIcon}><Text style={styles.addIconText}>＋</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>Add to your protocol</Text>
+                  <Text style={styles.cardDetail}>Set up an item, schedule and supply.</Text>
+                </View>
+                <Text style={styles.chevron}>›</Text>
+              </Pressable>
+            ) : null}
+
+            {activeProtocol && showBuilder ? (
+              <View style={styles.builderCard}>
+                <View style={styles.builderTop}>
+                  <View>
+                    <Text style={styles.smallLabel}>ADD ITEM · STEP {builderStep} OF 3</Text>
+                    <Text style={styles.builderTitle}>{builderStep === 1 ? 'What are you tracking?' : builderStep === 2 ? 'When do you take it?' : 'Supply & review'}</Text>
+                  </View>
+                  <Pressable onPress={() => { setShowBuilder(false); setBuilderStep(1); }}><Text style={styles.closeText}>CLOSE</Text></Pressable>
+                </View>
+                <View style={styles.progress}><View style={[styles.progressFill, { width: builderStep === 1 ? '33%' : builderStep === 2 ? '66%' : '100%' }]} /></View>
+
+                {builderStep === 1 ? <>
+                <TextInput style={styles.input} placeholder="Item name" placeholderTextColor={colors.muted} value={itemName} onChangeText={setItemName} />
+                <View style={styles.twoCol}>
+                  <TextInput style={[styles.input, styles.flex]} placeholder="Dose" placeholderTextColor={colors.muted} keyboardType="decimal-pad" value={dose} onChangeText={setDose} />
+                  <TextInput style={[styles.input, styles.flex]} placeholder="Unit" placeholderTextColor={colors.muted} value={unit} onChangeText={setUnit} autoCapitalize="none" />
+                </View>
+                <Text style={styles.smallLabel}>ROUTE</Text>
+                <View style={styles.chips}>
+                  {ROUTES.map((value) => <Pressable key={value} onPress={() => setRoute(value)} style={[styles.chip, route === value && styles.chipActive]}><Text style={[styles.chipText, route === value && styles.chipTextActive]}>{value}</Text></Pressable>)}
+                </View>
+                <Pressable style={styles.primary} onPress={() => {
+                  if (!itemName.trim() || !Number(dose) || Number(dose) <= 0 || !unit.trim()) return Alert.alert('Add the basics first', 'Enter a name, dose and unit to continue.');
+                  setBuilderStep(2);
+                }}><Text style={styles.primaryText}>CONTINUE</Text></Pressable>
+                </> : null}
+
+                {builderStep === 2 ? <>
+              <Text style={styles.smallLabel}>SCHEDULE</Text>
               <TextInput style={styles.input} placeholder="Item name" placeholderTextColor={colors.muted} value={itemName} onChangeText={setItemName} />
               <View style={styles.twoCol}>
                 <TextInput style={[styles.input, styles.flex]} placeholder="Dose" placeholderTextColor={colors.muted} keyboardType="decimal-pad" value={dose} onChangeText={setDose} />
@@ -215,8 +256,28 @@ export default function ProtocolScreen() {
                 </View>
               ) : null}
 
-              <TextInput style={styles.input} placeholder="Starting inventory (optional, same unit)" placeholderTextColor={colors.muted} keyboardType="decimal-pad" value={inventory} onChangeText={setInventory} />
-              <Pressable style={[styles.primary, busy && styles.disabled]} disabled={busy} onPress={() => void addItem()}><Text style={styles.primaryText}>ADD ITEM</Text></Pressable>
+              <View style={styles.builderNav}>
+                <Pressable style={styles.backButton} onPress={() => setBuilderStep(1)}><Text style={styles.backText}>BACK</Text></Pressable>
+                <Pressable style={[styles.primary, styles.flex]} onPress={() => {
+                  if (scheduleType === 'weekdays' && days.length === 0) return Alert.alert('Choose at least one day');
+                  setBuilderStep(3);
+                }}><Text style={styles.primaryText}>CONTINUE</Text></Pressable>
+              </View>
+              </> : null}
+
+              {builderStep === 3 ? <>
+                <View style={styles.reviewBox}>
+                  <Text style={styles.reviewName}>{itemName}</Text>
+                  <Text style={styles.cardDetail}>{dose} {unit} · {route}</Text>
+                  <Text style={styles.scheduleText}>{formatSchedule(buildSchedule())}</Text>
+                </View>
+                <Text style={styles.smallLabel}>SUPPLY · OPTIONAL</Text>
+                <TextInput style={styles.input} placeholder={`Starting inventory in ${unit || 'same unit'}`} placeholderTextColor={colors.muted} keyboardType="decimal-pad" value={inventory} onChangeText={setInventory} />
+                <View style={styles.builderNav}>
+                  <Pressable style={styles.backButton} onPress={() => setBuilderStep(2)}><Text style={styles.backText}>BACK</Text></Pressable>
+                  <Pressable style={[styles.primary, styles.flex, busy && styles.disabled]} disabled={busy} onPress={() => void addItem()}><Text style={styles.primaryText}>{busy ? 'ADDING…' : 'ADD TO PROTOCOL'}</Text></Pressable>
+                </View>
+              </> : null}
               </View>
             ) : null}
 
@@ -277,5 +338,20 @@ const styles = StyleSheet.create({
   protocolRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm },
   activateButton: { borderRadius: radius.md, backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentBorder, paddingHorizontal: 12, paddingVertical: 9 },
   activateText: { color: colors.accent, fontWeight: '900', fontSize: 10, letterSpacing: .7 },
+  addItemLaunch: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.bgElevated, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.xl },
+  addIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentBorder },
+  addIconText: { color: colors.accent, fontSize: 23, lineHeight: 27 },
+  chevron: { color: colors.subtle, fontSize: 28 },
+  builderCard: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.accentBorder, gap: spacing.md, marginBottom: spacing.xl },
+  builderTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md },
+  builderTitle: { color: colors.text, fontSize: 22, fontWeight: '800', marginTop: 5 },
+  closeText: { color: colors.muted, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+  progress: { height: 3, borderRadius: 2, backgroundColor: colors.border, overflow: 'hidden', marginBottom: spacing.sm },
+  progressFill: { height: 3, backgroundColor: colors.accent, borderRadius: 2 },
+  builderNav: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
+  backButton: { paddingHorizontal: 16, paddingVertical: 15, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
+  backText: { color: colors.muted, fontWeight: '900', fontSize: 11, letterSpacing: .8 },
+  reviewBox: { backgroundColor: colors.bgElevated, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md },
+  reviewName: { color: colors.text, fontSize: 20, fontWeight: '800' },
   disabled: { opacity: .55 }
 });
