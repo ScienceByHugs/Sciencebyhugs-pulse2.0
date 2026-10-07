@@ -6,9 +6,9 @@ import { colors } from '@/theme';
 
 const sfSymbols = {
   index: 'house.fill',
-  protocol: 'list.bullet.clipboard.fill',
-  log: 'clock.arrow.circlepath',
-  insights: 'chart.xyaxis.line',
+  protocol: 'list.bullet.rectangle.fill',
+  log: 'clock.fill',
+  insights: 'chart.bar.fill',
   you: 'person.crop.circle.fill'
 } as const;
 
@@ -25,7 +25,7 @@ function TabIcon({ routeName, color }: { routeName: string; color: string }) {
     const name = sfSymbols[routeName as keyof typeof sfSymbols] ?? 'circle.fill';
     return (
       <Host matchContents>
-        <Icon name={name} size={19} color={color} />
+        <Icon name={name as any} size={19} color={color} />
       </Host>
     );
   }
