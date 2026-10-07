@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 import { colors, radius, spacing } from '@/theme';
 
+const AUTH_REDIRECT_URL = 'pulse://auth/callback';
+
 export default function SignInScreen() {
   const { session } = useAuth();
   const [email, setEmail] = useState('');
@@ -26,7 +28,11 @@ export default function SignInScreen() {
       return Alert.alert('Check your details', 'Use a valid email and a password with at least 8 characters.');
     }
     setBusy(true);
-    const { error } = await supabase.auth.signUp({ email: email.trim(), password });
+    const { error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: { emailRedirectTo: AUTH_REDIRECT_URL }
+    });
     setBusy(false);
     if (error) return Alert.alert('Could not create account', error.message);
     Alert.alert('Check your email', 'Confirm your email to finish creating your Pulse account.');
