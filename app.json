@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "scheme": "pulse",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
+    
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sciencebyhugs.pulse",
