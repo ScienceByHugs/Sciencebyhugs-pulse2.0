@@ -71,7 +71,7 @@ export default function InsightsScreen() {
 
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
-            <View>
+            <View style={styles.sectionHeaderCopy}>
               <Text style={styles.cardTitle}>Supply runway</Text>
               <Text style={styles.detail}>A forecast from the inventory and dose values you entered.</Text>
             </View>
@@ -136,26 +136,27 @@ const styles = StyleSheet.create({
   body: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.xl },
   heroMetric: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.accentBorder, marginBottom: spacing.sm },
   heroMetricTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  heroMetricValue: { color: colors.text, fontSize: 42, fontWeight: '900', letterSpacing: -2, marginTop: 4 },
+  heroMetricValue: { color: colors.text, fontSize: 42, fontWeight: '900', letterSpacing: -2, marginTop: 4, fontVariant: ['tabular-nums'], lineHeight: 48 },
   metricBadge: { backgroundColor: colors.accentSoft, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 7 },
-  metricBadgeText: { color: colors.accent, fontSize: 11, fontWeight: '900' },
+  metricBadgeText: { color: colors.accent, fontSize: 11, fontWeight: '900', fontVariant: ['tabular-nums'] },
   progressTrack: { height: 6, backgroundColor: colors.border, borderRadius: radius.pill, overflow: 'hidden', marginTop: spacing.md },
   progressFill: { height: 6, backgroundColor: colors.accent, borderRadius: radius.pill },
   metrics: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
   metricCard: { flex: 1, backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.md, borderWidth: 1, borderColor: colors.border },
-  metricValue: { color: colors.text, fontSize: 28, fontWeight: '900' },
+  metricValue: { color: colors.text, fontSize: 28, fontWeight: '900', fontVariant: ['tabular-nums'], lineHeight: 32 },
   metricLabel: { color: colors.accent, fontSize: 12, fontWeight: '800', marginTop: 2 },
   metricDetail: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: 6 },
   card: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, marginTop: spacing.sm },
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
-  sectionCount: { color: colors.accent, backgroundColor: colors.accentSoft, paddingHorizontal: 9, paddingVertical: 5, borderRadius: radius.pill, fontWeight: '900' },
+  sectionHeaderCopy: { flex: 1, minWidth: 0 },
+  sectionCount: { color: colors.accent, backgroundColor: colors.accentSoft, minWidth: 30, textAlign: 'center', paddingHorizontal: 9, paddingVertical: 5, borderRadius: radius.pill, fontWeight: '900', fontVariant: ['tabular-nums'], alignSelf: 'flex-start' },
   supplyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
   supplyDivider: { borderTopWidth: 1, borderTopColor: colors.border },
   warningText: { color: colors.warning },
   cardTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
   value: { color: colors.text, fontSize: 22, fontWeight: '900', marginTop: spacing.md },
   detail: { color: colors.muted, marginTop: 7, lineHeight: 20 },
-  forecast: { color: colors.accent, marginTop: spacing.sm, lineHeight: 20, fontWeight: '700' },
+  forecast: { color: colors.accent, minWidth: 62, textAlign: 'right', marginTop: spacing.sm, lineHeight: 20, fontWeight: '700', fontVariant: ['tabular-nums'] },
   twoCol: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   flex: { flex: 1 },
   inputLabel: { color: colors.muted, fontSize: 9, fontWeight: '900', letterSpacing: 1.1, marginBottom: 5 },
