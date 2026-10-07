@@ -203,15 +203,15 @@ export async function flushQuickLogOutbox() {
     try {
       const { error } = await sendQuickLog(payload);
       if (error) {
-        if (isNetworkError(error)) break;
-        await removeQuickLog(payload.clientEventId);
-        continue;
+        // Keep every failed entry unless we know the server accepted it.
+        // The RPC is idempotent via clientEventId, so retrying is safer than
+        // silently discarding a user's administration history.
+        break;
       }
       await removeQuickLog(payload.clientEventId);
       flushed += 1;
-    } catch (error) {
-      if (isNetworkError(error)) break;
-      await removeQuickLog(payload.clientEventId);
+    } catch {
+      break;
     }
   }
 
