@@ -1,6 +1,6 @@
 import { Host, Icon } from '@expo/ui';
 import { Redirect, Tabs } from 'expo-router';
-import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View, type ColorValue } from 'react-native';
 import { useAuth } from '@/providers/AuthProvider';
 import { colors } from '@/theme';
 
@@ -27,7 +27,7 @@ const tabIcons = {
   })
 } as const;
 
-function TabIcon({ routeName, color, focused }: { routeName: string; color: any; focused: boolean }) {
+function TabIcon({ routeName, color, focused }: { routeName: string; color: ColorValue; focused: boolean }) {
   const name = tabIcons[routeName as keyof typeof tabIcons] ?? tabIcons.index;
   return (
     <View style={styles.iconShell}>
@@ -42,7 +42,7 @@ function TabIcon({ routeName, color, focused }: { routeName: string; color: any;
   );
 }
 
-function TabLabel({ label, focused, color }: { label: string; focused: boolean; color: string }) {
+function TabLabel({ label, focused, color }: { label: string; focused: boolean; color: ColorValue }) {
   return <Text style={[styles.tabLabel, { color }, focused && styles.tabLabelActive]}>{label.toUpperCase()}</Text>;
 }
 
