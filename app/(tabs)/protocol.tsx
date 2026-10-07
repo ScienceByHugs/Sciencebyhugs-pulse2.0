@@ -268,20 +268,9 @@ export default function ProtocolScreen() {
                 </> : null}
 
                 {builderStep === 2 ? <>
-              <Text style={styles.smallLabel}>SCHEDULE</Text>
-              <TextInput style={styles.input} placeholder="Item name" placeholderTextColor={colors.muted} value={itemName} onChangeText={setItemName} />
-              <View style={styles.twoCol}>
-                <TextInput style={[styles.input, styles.flex]} placeholder="Dose" placeholderTextColor={colors.muted} keyboardType="decimal-pad" value={dose} onChangeText={setDose} />
-                <TextInput style={[styles.input, styles.flex]} placeholder="Unit" placeholderTextColor={colors.muted} value={unit} onChangeText={setUnit} autoCapitalize="none" />
-              </View>
-
-              <Text style={styles.smallLabel}>ROUTE</Text>
-              <View style={styles.chips}>
-                {ROUTES.map((value) => (
-                  <Pressable key={value} onPress={() => setRoute(value)} style={[styles.chip, route === value && styles.chipActive]}>
-                    <Text style={[styles.chipText, route === value && styles.chipTextActive]}>{value}</Text>
-                  </Pressable>
-                ))}
+              <View style={styles.builderSummary}>
+                <Text style={styles.builderSummaryName}>{itemName}</Text>
+                <Text style={styles.cardDetail}>{dose} {unit} · {route}</Text>
               </View>
 
               <Text style={styles.smallLabel}>SCHEDULE</Text>
@@ -432,6 +421,8 @@ const styles = StyleSheet.create({
   closeText: { color: colors.muted, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   progress: { height: 3, borderRadius: 2, backgroundColor: colors.border, overflow: 'hidden', marginBottom: spacing.sm },
   progressFill: { height: 3, backgroundColor: colors.accent, borderRadius: 2 },
+  builderSummary: { backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md },
+  builderSummaryName: { color: colors.text, fontSize: 16, fontWeight: '900' },
   builderNav: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
   backButton: { paddingHorizontal: 16, paddingVertical: 15, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
   backText: { color: colors.muted, fontWeight: '900', fontSize: 11, letterSpacing: .8 },
