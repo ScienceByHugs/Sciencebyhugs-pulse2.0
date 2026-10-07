@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, type } from '@/theme';
-import { flushQuickLogOutbox, listRecentSites, listTodayItems, quickLog, type TodayItem } from '@/services/pulse';
+import { flushQuickLogOutbox, listDoseLogs, listRecentSites, listTodayItems, quickLog, type TimelineEntry, type TodayItem } from '@/services/pulse';
 import { isDueOnDate, scheduleTime } from '@/domain/schedule';
 import { sitesForRoute, suggestSite } from '@/domain/sites';
 import { rescheduleReminders } from '@/lib/reminders';
@@ -18,6 +18,7 @@ function timeLabel(value?: string) {
 
 export default function TodayScreen() {
   const [allItems, setAllItems] = useState<TodayItem[]>([]);
+  const [todayLogs, setTodayLogs] = useState<TimelineEntry[]>([]);
   const [recentSites, setRecentSites] = useState<Record<string, string[]>>({});
   const [selectedSites, setSelectedSites] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -27,8 +28,9 @@ export default function TodayScreen() {
   const load = useCallback(async () => {
     try {
       await flushQuickLogOutbox();
-      const [items, sites] = await Promise.all([listTodayItems(), listRecentSites()]);
+      const [items, sites, logs] = await Promise.all([listTodayItems(), listRecentSites(), listDoseLogs(150)]);
       setAllItems(items);
+      setTodayLogs(logs);
       const dueItems = items.filter((item) => isDueOnDate(item.schedule));
       const nextTime = dueItems.length ? timeLabel(scheduleTime(dueItems[0]?.schedule ?? {})) : 'Open Pulse';
       await Promise.all([rescheduleReminders(items), updatePulseTodayWidget(dueItems.length, nextTime)]);
@@ -58,6 +60,24 @@ export default function TodayScreen() {
       .sort((a, b) => (scheduleTime(a.schedule) ?? '99:99').localeCompare(scheduleTime(b.schedule) ?? '99:99')),
     [allItems]
   );
+
+  const completion = useMemo(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+    const completedIds = new Set(todayLogs.filter((entry) => {
+      const logged = new Date(entry.logged_at);
+      return logged >= start && logged < end && entry.protocol_item_id;
+    }).map((entry) => entry.protocol_item_id as string));
+    const completed = items.filter((item) => completedIds.has(item.id)).length;
+    return {
+      completed,
+      due: items.length,
+      percent: items.length ? Math.round((completed / items.length) * 100) : 100,
+      completedIds
+    };
+  }, [items, todayLogs]);
 
   const dayBrief = useMemo(() => {
     const lowSupply = allItems.filter((item) => {
@@ -129,6 +149,25 @@ export default function TodayScreen() {
             <View style={styles.summaryCell}><Text style={styles.summaryNumber}>{allItems.length}</Text><Text style={styles.summaryLabel}>ACTIVE ITEMS</Text></View>
           </View>
 
+          <View style={styles.daySignalCard}>
+            <View style={styles.daySignalHeader}>
+              <View>
+                <Text style={styles.briefEyebrow}>DAY SIGNAL</Text>
+                <Text style={styles.daySignalTitle}>{completion.due ? `${completion.completed} of ${completion.due} logged` : 'Nothing due today'}</Text>
+              </View>
+              <Text style={styles.daySignalPercent}>{completion.percent}%</Text>
+            </View>
+            <View style={styles.daySignalTrack}>
+              <View style={[styles.daySignalFill, { width: `${completion.percent}%` as `${number}%` }]} />
+            </View>
+            <View style={styles.daySignalNodes}>
+              {(items.length ? items : [null]).map((item, index) => {
+                const active = item ? completion.completedIds.has(item.id) : true;
+                return <View key={item?.id ?? 'clear'} style={[styles.daySignalNode, active && styles.daySignalNodeActive]} />;
+              })}
+            </View>
+          </View>
+
           <View style={styles.briefCard}>
             <View style={styles.briefHeader}>
               <View>
@@ -176,11 +215,12 @@ export default function TodayScreen() {
           return (
             <View key={item.id}>
               <Text style={styles.sectionLabel}>{index === 0 ? 'NEXT' : 'TODAY'}</Text>
-              <View style={[styles.heroCard, low && styles.lowCard]}>
+              <View style={[styles.heroCard, low && styles.lowCard, completion.completedIds.has(item.id) && styles.completedCard]}>
                 <View style={styles.heroTop}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.medName}>{item.name}</Text>
                     <Text style={styles.detail}>{item.dose_amount} {item.dose_unit} · {item.route}</Text>
+                    {completion.completedIds.has(item.id) ? <Text style={styles.completedLabel}>LOGGED TODAY</Text> : null}
                   </View>
                   <View style={styles.duePill}><Text style={styles.dueText}>{timeLabel(scheduleTime(item.schedule))}</Text></View>
                 </View>
@@ -229,6 +269,15 @@ const styles = StyleSheet.create({
   livePill: { borderRadius: 999, borderWidth: 1, borderColor: colors.accentBorder, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.accentSoft },
   liveText: { color: colors.accent, fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
   heroHeader: { marginBottom: spacing.lg },
+  daySignalCard: { marginTop: spacing.md, backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.accentBorder, borderRadius: radius.xl, padding: spacing.md },
+  daySignalHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
+  daySignalTitle: { color: colors.text, fontSize: 15, fontWeight: '900', marginTop: 3 },
+  daySignalPercent: { color: colors.accent, fontSize: 22, lineHeight: 26, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  daySignalTrack: { height: 5, backgroundColor: colors.border, borderRadius: radius.pill, overflow: 'hidden', marginTop: spacing.md },
+  daySignalFill: { height: '100%', backgroundColor: colors.accent, borderRadius: radius.pill },
+  daySignalNodes: { flexDirection: 'row', gap: 5, marginTop: spacing.sm },
+  daySignalNode: { flex: 1, height: 3, borderRadius: radius.pill, backgroundColor: colors.border },
+  daySignalNodeActive: { backgroundColor: colors.accent },
   briefCard: { marginTop: spacing.md, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.accentBorder, borderRadius: radius.xl, padding: spacing.md },
   briefHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
   briefEyebrow: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1.4 },
@@ -253,8 +302,10 @@ const styles = StyleSheet.create({
   sectionLabel: { color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1.8, marginTop: spacing.md, marginBottom: 2 },
   heroCard: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.md },
   lowCard: { borderColor: '#8f6b3d' },
+  completedCard: { borderColor: colors.accentBorder, backgroundColor: colors.bgElevated },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md },
   medName: { color: colors.text, fontSize: 22, fontWeight: '700' },
+  completedLabel: { color: colors.success, fontSize: 9, fontWeight: '900', letterSpacing: 1.1, marginTop: 7 },
   detail: { color: colors.muted, marginTop: 4, fontSize: 13, lineHeight: 19 },
   duePill: { backgroundColor: colors.accentSoft, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
   dueText: { color: colors.accent, fontSize: 10, fontWeight: '900', letterSpacing: .7, fontVariant: ['tabular-nums'] },
