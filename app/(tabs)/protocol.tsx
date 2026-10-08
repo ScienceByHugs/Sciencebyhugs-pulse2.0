@@ -9,12 +9,15 @@ type Protocol = { id: string; name: string; status: string };
 const ROUTES = ['subcutaneous', 'intramuscular', 'oral', 'topical', 'other'] as const;
 const SCHEDULES = ['daily', 'weekdays', 'interval', 'cycle'] as const;
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const CATEGORIES = ['Peptide', 'GLP-1', 'Anabolic', 'Medication', 'Vitamin', 'Supplement', 'Other'] as const;
 
 export default function ProtocolScreen() {
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [items, setItems] = useState<TodayItem[]>([]);
   const [protocolName, setProtocolName] = useState('');
   const [itemName, setItemName] = useState('');
+  const [category, setCategory] = useState<string>('Peptide');
+  const [showNewProtocol, setShowNewProtocol] = useState(false);
   const [dose, setDose] = useState('');
   const [unit, setUnit] = useState('mg');
   const [route, setRoute] = useState<(typeof ROUTES)[number]>('subcutaneous');
@@ -68,6 +71,7 @@ export default function ProtocolScreen() {
       setBusy(true);
       await createProtocol(protocolName);
       setProtocolName('');
+      setShowNewProtocol(false);
       await load();
     } catch (error) {
       Alert.alert('Could not create protocol', error instanceof Error ? error.message : 'Unknown error');
@@ -120,6 +124,7 @@ export default function ProtocolScreen() {
       await createProtocolItem({
         protocolId: activeProtocol.id,
         name: itemName,
+        category,
         route,
         doseAmount: numericDose,
         doseUnit: unit,
@@ -145,6 +150,12 @@ export default function ProtocolScreen() {
         <Text style={styles.eyebrow}>YOUR ROUTINE</Text>
         <Text style={styles.title}>Protocol</Text>
         <Text style={styles.body}>Build the routine once. Pulse handles the day-to-day tracking.</Text>
+
+        <View style={styles.launchRow}>
+          <Pressable style={styles.launchButton} onPress={() => setShowNewProtocol((value) => !value)}><Text style={styles.launchText}>＋ NEW PROTOCOL</Text></Pressable>
+          {activeProtocol ? <Pressable style={styles.launchButton} onPress={() => { setBuilderStep(1); setShowBuilder(true); }}><Text style={styles.launchText}>＋ ADD SUBSTANCE</Text></Pressable> : null}
+        </View>
+        {showNewProtocol && protocols.length > 0 ? <View style={styles.card}><Text style={styles.cardTitle}>Name your new protocol</Text><TextInput style={styles.input} placeholder="e.g. Daily regimen" placeholderTextColor={colors.muted} value={protocolName} onChangeText={setProtocolName} /><Pressable style={styles.primary} disabled={busy} onPress={() => void addProtocol()}><Text style={styles.primaryText}>CREATE PROTOCOL</Text></Pressable></View> : null}
 
         {protocols.length === 0 ? (
           <View style={styles.card}>
@@ -259,6 +270,8 @@ export default function ProtocolScreen() {
                   <TextInput style={[styles.input, styles.flex]} placeholder="Dose" placeholderTextColor={colors.muted} keyboardType="decimal-pad" value={dose} onChangeText={setDose} />
                   <TextInput style={[styles.input, styles.flex]} placeholder="Unit" placeholderTextColor={colors.muted} value={unit} onChangeText={setUnit} autoCapitalize="none" />
                 </View>
+                <Text style={styles.smallLabel}>CATEGORY</Text>
+                <View style={styles.chips}>{CATEGORIES.map((value) => <Pressable key={value} onPress={() => setCategory(value)} style={[styles.chip, category === value && styles.chipActive]}><Text style={[styles.chipText, category === value && styles.chipTextActive]}>{value}</Text></Pressable>)}</View>
                 <Text style={styles.smallLabel}>ROUTE</Text>
                 <View style={styles.chips}>
                   {ROUTES.map((value) => <Pressable key={value} onPress={() => setRoute(value)} style={[styles.chip, route === value && styles.chipActive]}><Text style={[styles.chipText, route === value && styles.chipTextActive]}>{value}</Text></Pressable>)}
@@ -338,7 +351,7 @@ export default function ProtocolScreen() {
                 <View style={styles.itemCard} key={item.id}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.itemTitle}>{item.name}</Text>
-                    <Text style={styles.cardDetail}>{item.dose_amount} {item.dose_unit} · {item.route}</Text>
+                    <Text style={styles.cardDetail}>{item.category || 'Substance'} · {item.dose_amount} {item.dose_unit} · {item.route}</Text>
                     <Text style={styles.scheduleText}>{formatSchedule(item.schedule)}</Text>
                   </View>
                   <Text style={styles.stock}>{inventoryItem ? `${inventoryItem.remaining_amount} ${inventoryItem.unit}` : 'No stock'}</Text>
@@ -355,6 +368,9 @@ export default function ProtocolScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   page: { padding: spacing.lg, paddingBottom: 148 },
+  launchRow: { flexDirection: 'row', gap: 8, marginBottom: spacing.md },
+  launchButton: { flex: 1, minWidth: 0, paddingVertical: 14, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft, borderColor: colors.accentBorder, borderWidth: 1, borderRadius: radius.md },
+  launchText: { color: colors.accent, fontWeight: '900', fontSize: 10, letterSpacing: .7, textAlign: 'center' },
   eyebrow: { color: colors.accent, fontSize: 11, fontWeight: '900', letterSpacing: 1.8, marginTop: spacing.md },
   title: { color: colors.text, fontSize: 31, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
   body: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.md },
