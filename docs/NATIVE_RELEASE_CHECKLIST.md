@@ -69,3 +69,14 @@
 
 ## Release rule
 Do not call Pulse 2.0 beta-ready until Gates 1–4 pass on a physical iPhone. Do not submit to the App Store until Gate 5 passes without a critical defect.
+
+## Physical iPhone acceptance pass (required; not CI-verified)
+- [ ] Today: compare Upcoming vs Completed with 0, 1, and several scheduled items; repeat after midnight
+- [ ] Today: schedule a past-due unlogged item; confirm it does not display COMPLETE
+- [ ] Today: log online and offline; inspect status before and after outbox replay
+- [ ] Insights: compare displayed Reservoir percentage against remaining / total inventory, including zero and low stock
+- [ ] Insights: verify distinct same-name items do not conflict and long item names fit small screens
+- [ ] All tabs: check text scaling, reduced motion, portrait layout, scrolling and tap targets on a real iPhone
+- [ ] Native: verify deep-link signup/password reset, notification permission and delivery, widget visibility, export and delete
+
+Code CI validates TypeScript, not native rendering or EAS/TestFlight distribution. Do not mark these checked from CI alone.
