@@ -14,6 +14,7 @@ export type TodayItem = {
   id: string;
   protocol_id: string;
   created_at?: string;
+  active?: boolean;
   name: string;
   category: string | null;
   route: string;
@@ -58,6 +59,26 @@ export async function updateProtocolStatus(protocolId: string, status: 'active' 
     .update({ status, updated_at: new Date().toISOString() })
     .eq('id', protocolId);
 
+  if (error) throw error;
+}
+
+export async function setProtocolItemActive(itemId: string, active: boolean) {
+  const userId = await currentUserId();
+  const { error } = await supabase.from('protocol_items')
+    .update({ active })
+    .eq('id', itemId)
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
+export async function updateProtocolItemDetails(itemId: string, name: string, category: string) {
+  const userId = await currentUserId();
+  const cleaned = name.trim();
+  if (!cleaned || cleaned.length > 100) throw new Error('Enter a substance name up to 100 characters.');
+  const { error } = await supabase.from('protocol_items')
+    .update({ name: cleaned, category: category.trim() || null })
+    .eq('id', itemId)
+    .eq('user_id', userId);
   if (error) throw error;
 }
 
