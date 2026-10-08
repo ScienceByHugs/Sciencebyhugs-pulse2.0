@@ -18,6 +18,8 @@ export default function LogScreen() {
   const [protocolItems, setProtocolItems] = useState<TodayItem[]>([]);
   const [selectedProtocol, setSelectedProtocol] = useState<string | null>(null);
   const [monthOffset, setMonthOffset] = useState(0);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [selectedWeekDay, setSelectedWeekDay] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month' | 'year' | 'cycle' | 'all'>('week');
 
@@ -74,9 +76,46 @@ export default function LogScreen() {
     return cells;
   }, [entries, monthDate]);
 
+  const weekDays = useMemo(() => {
+    const start = new Date();
+    start.setHours(12, 0, 0, 0);
+    start.setDate(start.getDate() - start.getDay() + weekOffset * 7);
+    const counts = new Map<string, number>();
+    for (const entry of entries) {
+      const day = localDateKey(new Date(entry.logged_at));
+      counts.set(day, (counts.get(day) ?? 0) + 1);
+    }
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      const key = localDateKey(date);
+      return {
+        key,
+        date: date.getDate(),
+        label: date.toLocaleDateString(undefined, { weekday: 'short' }),
+        count: counts.get(key) ?? 0,
+        today: key === localDateKey()
+      };
+    });
+  }, [entries, weekOffset]);
+
+  const weekLabel = useMemo(() => {
+    const start = weekDays[0]?.key;
+    const end = weekDays[6]?.key;
+    return start && end ? `${start} — ${end}` : '';
+  }, [weekDays]);
+
   const filteredEntries = useMemo(() => {
     const now = new Date();
     if (viewMode === 'all') return entries;
+    if (viewMode === 'week') {
+      const start = weekDays[0]?.key;
+      const end = weekDays[6]?.key;
+      return entries.filter((entry) => {
+        const logged = localDateKey(new Date(entry.logged_at));
+        return selectedWeekDay ? logged === selectedWeekDay : !!start && !!end && logged >= start && logged <= end;
+      });
+    }
     if (viewMode === 'month') {
       return entries.filter((entry) => {
         const logged = localDateKey(new Date(entry.logged_at));
@@ -86,10 +125,9 @@ export default function LogScreen() {
     if (viewMode === 'cycle') return cycleEntries;
     const start = new Date(now);
     start.setHours(0, 0, 0, 0);
-    if (viewMode === 'week') start.setDate(start.getDate() - 6);
     if (viewMode === 'year') start.setMonth(0, 1);
     return entries.filter((entry) => new Date(entry.logged_at) >= start);
-  }, [entries, cycleEntries, viewMode, monthDate, selectedDay]);
+  }, [entries, cycleEntries, viewMode, monthDate, selectedDay, weekDays, selectedWeekDay]);
 
   const activity = useMemo(() => {
     const now = new Date();
@@ -131,7 +169,40 @@ export default function LogScreen() {
         <Text style={styles.title}>Timeline</Text>
         <Text style={styles.body}>A clear record of what you logged, when you logged it, and where.</Text>
 
-        <View style={styles.modeStrip}>{(['day', 'week', 'month', 'year', 'cycle', 'all'] as const).map((mode) => <Pressable accessibilityRole="button" accessibilityState={{ selected: viewMode === mode }} key={mode} style={[styles.modeButton, viewMode === mode && styles.modeButtonActive]} onPress={() => { setViewMode(mode); if (mode === 'month') setSelectedDay(null); }}><Text style={[styles.modeText, viewMode === mode && styles.modeTextActive]}>{mode.toUpperCase()}</Text></Pressable>)}</View>
+        <View style={styles.modeStrip}>{(['day', 'week', 'month', 'year', 'cycle', 'all'] as const).map((mode) => <Pressable accessibilityRole="button" accessibilityState={{ selected: viewMode === mode }} key={mode} style={[styles.modeButton, viewMode === mode && styles.modeButtonActive]} onPress={() => { setViewMode(mode); if (mode === 'month') setSelectedDay(null); if (mode === 'week') setSelectedWeekDay(null); }}><Text style={[styles.modeText, viewMode === mode && styles.modeTextActive]}>{mode.toUpperCase()}</Text></Pressable>)}</View>
+        {viewMode === 'week' ? (
+          <View style={styles.weekGridCard}>
+            <View style={styles.calendarHeader}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.signalEyebrow}>WEEKLY ACTIVITY / RECORD</Text>
+                <Text style={styles.weekGridTitle}>Your week at a glance</Text>
+                <Text style={styles.weekGridRange}>{weekLabel}</Text>
+              </View>
+              <Pressable accessibilityRole="button" accessibilityLabel="Previous week" style={styles.monthNav} onPress={() => { setWeekOffset((value) => value - 1); setSelectedWeekDay(null); }}><Text style={styles.monthNavText}>‹</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Next week" style={styles.monthNav} onPress={() => { setWeekOffset((value) => value + 1); setSelectedWeekDay(null); }}><Text style={styles.monthNavText}>›</Text></Pressable>
+            </View>
+            <View style={styles.weekGrid}>
+              {weekDays.map((day) => (
+                <Pressable
+                  key={day.key}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${day.label}, ${day.key}, ${day.count} logged events`}
+                  accessibilityState={{ selected: selectedWeekDay === day.key }}
+                  style={[styles.weekGridDay, day.today && styles.weekGridToday, selectedWeekDay === day.key && styles.weekGridSelected]}
+                  onPress={() => setSelectedWeekDay((value) => value === day.key ? null : day.key)}
+                >
+                  <Text style={[styles.weekGridDayLabel, day.today && styles.weekGridHighlight]}>{day.label.toUpperCase()}</Text>
+                  <Text style={styles.weekGridDate}>{day.date}</Text>
+                  <View style={[styles.weekGridTrack, day.count > 0 && styles.weekGridTrackActive]}>
+                    <View style={[styles.weekGridFill, { height: `${Math.min(100, day.count * 22)}%` as `${number}%` }]} />
+                  </View>
+                  <Text style={[styles.weekGridCount, day.count > 0 && styles.weekGridHighlight]}>{day.count}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Text style={styles.calendarFoot}>{selectedWeekDay ? `FILTERED · ${selectedWeekDay} · TAP AGAIN TO SHOW WEEK` : 'TAP A DAY TO REVIEW ITS LOGGED ENTRIES'}</Text>
+          </View>
+        ) : null}
         {viewMode === 'month' ? (
           <View style={styles.calendarCard}>
             <View style={styles.calendarHeader}>
@@ -234,6 +305,20 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   page: { padding: layout.pageInset, paddingBottom: layout.pageBottom },
   modeStrip: { flexDirection: 'row', gap: 5, marginBottom: 14 },
+  weekGridCard: { backgroundColor: colors.bgElevated, borderRadius: radius.xl, borderColor: colors.accentBorder, borderWidth: 1, padding: spacing.md, marginBottom: spacing.md },
+  weekGridTitle: { color: colors.text, fontSize: 21, fontWeight: '900', marginTop: 5 },
+  weekGridRange: { color: colors.muted, fontSize: 11, marginTop: 5, fontVariant: ['tabular-nums'] },
+  weekGrid: { flexDirection: 'row', gap: 4, justifyContent: 'space-between' },
+  weekGridDay: { flex: 1, minWidth: 0, backgroundColor: colors.panel, borderRadius: radius.md, paddingVertical: 9, alignItems: 'center', borderWidth: 1, borderColor: colors.border, gap: 5, minHeight: 135 },
+  weekGridToday: { borderColor: colors.accentBorder },
+  weekGridSelected: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
+  weekGridDayLabel: { color: colors.subtle, fontSize: 8, fontWeight: '900' },
+  weekGridDate: { color: colors.text, fontSize: 15, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  weekGridTrack: { width: 5, height: 43, backgroundColor: colors.border, borderRadius: radius.pill, justifyContent: 'flex-end', overflow: 'hidden' },
+  weekGridTrackActive: { backgroundColor: colors.accentSoft },
+  weekGridFill: { width: '100%', backgroundColor: colors.accent, borderRadius: radius.pill },
+  weekGridCount: { color: colors.subtle, fontSize: 10, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  weekGridHighlight: { color: colors.accent },
   calendarCard: { backgroundColor: colors.bgElevated, borderRadius: radius.xl, borderColor: colors.accentBorder, borderWidth: 1, padding: spacing.md, marginBottom: spacing.md },
   calendarHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: spacing.lg },
   calendarMonth: { fontSize: 22, lineHeight: 29, color: colors.text, fontWeight: '900', letterSpacing: -0.5, marginTop: 5 },
