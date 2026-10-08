@@ -62,6 +62,30 @@ export async function updateProtocolStatus(protocolId: string, status: 'active' 
   if (error) throw error;
 }
 
+function validCalendarDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
+}
+
+export async function updateProtocolDetails(protocolId: string, name: string, startsOn: string | null, endsOn: string | null) {
+  const userId = await currentUserId();
+  const cleanName = name.trim();
+  if (!cleanName || cleanName.length > 100) throw new Error('Use a protocol name of 1–100 characters.');
+  if (startsOn && !validCalendarDate(startsOn)) throw new Error('Start date must be a real date in YYYY-MM-DD format.');
+  if (endsOn && !validCalendarDate(endsOn)) throw new Error('End date must be a real date in YYYY-MM-DD format.');
+  if (startsOn && endsOn && endsOn < startsOn) throw new Error('End date cannot be before the start date.');
+  const { data, error } = await supabase.from('protocols')
+    .update({ name: cleanName, starts_on: startsOn, ends_on: endsOn, updated_at: new Date().toISOString() })
+    .eq('id', protocolId)
+    .eq('user_id', userId)
+    .select('id')
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error('Protocol not found or you do not have permission to update it.');
+}
+
 export async function setProtocolItemActive(itemId: string, active: boolean) {
   const userId = await currentUserId();
   const { error } = await supabase.from('protocol_items')
