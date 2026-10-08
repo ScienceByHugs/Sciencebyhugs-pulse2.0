@@ -13,6 +13,7 @@ export type InventorySummary = {
 export type TodayItem = {
   id: string;
   protocol_id: string;
+  created_at?: string;
   name: string;
   category: string | null;
   route: string;
@@ -88,7 +89,7 @@ export async function listProtocolItems(protocolId?: string) {
 export async function listTodayItems() {
   const { data, error } = await supabase
     .from('protocol_items')
-    .select('id,protocol_id,name,category,route,dose_amount,dose_unit,schedule,site_rotation_enabled,inventory_containers(id,remaining_amount,total_amount,unit,low_threshold,is_active),protocols!inner(status)')
+    .select('id,protocol_id,created_at,name,category,route,dose_amount,dose_unit,schedule,site_rotation_enabled,inventory_containers(id,remaining_amount,total_amount,unit,low_threshold,is_active),protocols!inner(status)')
     .eq('active', true)
     .eq('protocols.status', 'active')
     .order('created_at', { ascending: true });
