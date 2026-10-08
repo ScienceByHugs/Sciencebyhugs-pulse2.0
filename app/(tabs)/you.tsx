@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { colors, radius, spacing, type } from '@/theme';
 import { useAuth } from '@/providers/AuthProvider';
@@ -22,6 +22,9 @@ export default function YouScreen() {
   const [privateNotifications, setPrivateNotificationsState] = useState(true);
   const [reminders, setReminders] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [displayName, setDisplayName] = useState(() => String(session?.user.user_metadata?.full_name ?? ''));
+  const [savedName, setSavedName] = useState(() => String(session?.user.user_metadata?.full_name ?? ''));
+  const [savingProfile, setSavingProfile] = useState(false);
 
 
   const load = useCallback(async () => {
@@ -33,9 +36,29 @@ export default function YouScreen() {
     setBiometricLock(lock);
     setPrivateNotificationsState(privateMode);
     setReminders(reminderMode);
+    const { data: { user } } = await supabase.auth.getUser();
+    const currentName = String(user?.user_metadata?.full_name ?? '');
+    setDisplayName(currentName);
+    setSavedName(currentName);
   }, []);
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
+
+  async function saveProfile() {
+    const name = displayName.trim();
+    if (!name || name.length > 80) return Alert.alert('Check your name', 'Enter a name of up to 80 characters.');
+    setSavingProfile(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ data: { full_name: name, first_name: name.split(/\s+/)[0] } });
+      if (error) throw error;
+      setSavedName(name);
+      Alert.alert('Profile updated', 'Your welcome message will use your updated name.');
+    } catch (error) {
+      Alert.alert('Could not save profile', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setSavingProfile(false);
+    }
+  }
 
   async function toggleLock(value: boolean) {
     if (!value) {
@@ -137,7 +160,21 @@ export default function YouScreen() {
       <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
         <Text style={styles.eyebrow}>PRIVATE BY DESIGN</Text>
         <Text style={styles.title}>You</Text>
-        <Text style={styles.body}>Control what Pulse stores on this device and what appears on your lock screen.</Text>
+        <Text style={styles.body}>Personalize your account, manage privacy and control your data.</Text>
+
+        <View style={styles.profileCard}>
+          <View style={styles.avatar}><Text style={styles.avatarText}>{(savedName || session?.user.email || 'P').slice(0, 1).toUpperCase()}</Text></View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.label}>YOUR ACCOUNT</Text>
+            <Text style={styles.value} selectable>{session?.user.email ?? 'Pulse user'}</Text>
+          </View>
+        </View>
+        <View style={styles.profileEditor}>
+          <Text style={styles.cardTitle}>Your profile</Text>
+          <Text style={styles.detail}>Choose the name Pulse uses to welcome you.</Text>
+          <TextInput accessibilityLabel="Display name" autoCapitalize="words" autoCorrect={false} maxLength={80} style={styles.profileInput} placeholder="Your name" placeholderTextColor={colors.muted} value={displayName} onChangeText={setDisplayName} />
+          <Pressable accessibilityRole="button" style={[styles.dataButton, (savingProfile || displayName.trim() === savedName) && styles.profileSaveDisabled]} disabled={savingProfile || displayName.trim() === savedName} onPress={() => void saveProfile()}><Text style={styles.dataButtonText}>{savingProfile ? 'SAVING…' : 'SAVE PROFILE'}</Text></Pressable>
+        </View>
 
         <View style={styles.shieldCard}>
           <View style={styles.shieldTop}>
@@ -161,14 +198,6 @@ export default function YouScreen() {
               <View style={[styles.shieldDot, reminders && styles.shieldDotActive]} />
               <Text style={[styles.shieldSignalText, reminders && styles.shieldSignalTextActive]}>REMINDERS</Text>
             </View>
-          </View>
-        </View>
-
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}><Text style={styles.avatarText}>{(session?.user.email ?? 'P').slice(0, 1).toUpperCase()}</Text></View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.label}>SIGNED IN AS</Text>
-            <Text style={styles.value} selectable>{session?.user.email ?? 'Pulse user'}</Text>
           </View>
         </View>
 
@@ -257,6 +286,9 @@ const styles = StyleSheet.create({
   shieldDotActive: { backgroundColor: colors.success },
   shieldSignalText: { color: colors.subtle, fontSize: 7, fontWeight: '900', letterSpacing: .7, textAlign: 'center' },
   shieldSignalTextActive: { color: colors.text },
+  profileEditor: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.md, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.md },
+  profileInput: { marginTop: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 12, color: colors.text, backgroundColor: colors.bgElevated, fontSize: 16 },
+  profileSaveDisabled: { opacity: .45 },
   profileCard: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.xl },
   avatar: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentBorder, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: colors.accent, fontSize: 18, fontWeight: '900' },
