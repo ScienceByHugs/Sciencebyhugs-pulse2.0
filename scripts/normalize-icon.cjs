@@ -2,6 +2,11 @@
 // macOS sips is available on EAS iOS builders and on developer Macs.
 // Re-encode the existing artwork as truecolor PNG before Expo's native prebuild.
 // Invoked by eas-build-pre-install: post-install happens too late on iOS.
+if (process.env.EAS_BUILD_PLATFORM === 'android') {
+  console.log('Skipping macOS icon conversion for Android EAS build.');
+  process.exit(0);
+}
+
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
