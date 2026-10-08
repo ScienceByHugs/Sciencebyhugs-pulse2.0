@@ -1,0 +1,68 @@
+name: Repair Pulse native icon
+
+on:
+  push:
+    branches:
+      - nova/repair-broken-ios-icon-asset
+    paths:
+      - ".github/workflows/repair-pulse-icon.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair-icon:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install PNG processing library
+        run: python -m pip install "Pillow>=11,<13"
+      - name: Replace undecodable PNG with valid truecolor PNG
+        run: |
+          python - <<'PY'
+          from PIL import Image, ImageDraw, ImageFont
+          from pathlib import Path
+          import warnings
+
+          icon = Path("assets/icon.png")
+          try:
+              with Image.open(icon) as original:
+                  original.load()
+                  img = original.convert("RGB")
+              print("Source icon was decoded successfully and will retain original artwork.")
+          except Exception as error:
+              print(f"Source icon is unrecoverable: {error!r}")
+              print("Creating a clean Science By Hugs Pulse icon so native builds are no longer blocked.")
+              size = 1024
+              img = Image.new("RGB", (size, size), "#07111F")
+              draw = ImageDraw.Draw(img)
+              draw.rounded_rectangle((80, 80, 944, 944), radius=208, fill="#0D2A3D", outline="#1E668F", width=7)
+              draw.arc((208, 195, 816, 803), start=24, end=335, fill="#62CCFF", width=34)
+              draw.line([(264, 528), (383, 528), (432, 410), (516, 646), (582, 482), (760, 482)], fill="#62CCFF", width=36, joint="curve")
+              draw.ellipse((725, 446, 797, 518), fill="#63D6A3")
+              draw.rounded_rectangle((310, 755, 714, 766), radius=5, fill="#1E668F")
+
+          if img.size != (1024, 1024):
+              img = img.resize((1024, 1024), Image.Resampling.LANCZOS)
+          img.save(icon, format="PNG", optimize=False, compress_level=6)
+          with Image.open(icon) as check:
+              check.load()
+              assert check.size == (1024, 1024)
+              assert check.mode == "RGB"
+          print(f"Validated: {icon} is a 1024x1024 RGB PNG ({icon.stat().st_size} bytes).")
+          PY
+      - name: Commit repaired icon to the same branch
+        run: |
+          git config user.name "Pulse Build Repair"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/icon.png
+          if ! git diff --cached --quiet; then
+            git commit -m "fix: replace incompatible iOS icon with validated RGB PNG"
+            git push origin HEAD:nova/repair-broken-ios-icon-asset
+          fi
