@@ -11,7 +11,7 @@ function dayKey(value: string) {
 
 export default function LogScreen() {
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
-  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month' | 'year' | 'cycle'>('week');
+  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month' | 'year' | 'all'>('week');
 
   const load = useCallback(async () => {
     try {
@@ -48,7 +48,7 @@ export default function LogScreen() {
 
   const filteredEntries = useMemo(() => {
     const now = new Date();
-    if (viewMode === 'cycle') return entries;
+    if (viewMode === 'all') return entries;
     const start = new Date(now);
     start.setHours(0, 0, 0, 0);
     if (viewMode === 'week') start.setDate(start.getDate() - 6);
@@ -73,7 +73,7 @@ export default function LogScreen() {
         <Text style={styles.title}>Timeline</Text>
         <Text style={styles.body}>A clear record of what you logged, when you logged it, and where.</Text>
 
-        <View style={styles.modeStrip}>{(['day', 'week', 'month', 'year', 'cycle'] as const).map((mode) => <Pressable accessibilityRole="button" accessibilityState={{ selected: viewMode === mode }} key={mode} style={[styles.modeButton, viewMode === mode && styles.modeButtonActive]} onPress={() => setViewMode(mode)}><Text style={[styles.modeText, viewMode === mode && styles.modeTextActive]}>{mode.toUpperCase()}</Text></Pressable>)}</View>
+        <View style={styles.modeStrip}>{(['day', 'week', 'month', 'year', 'all'] as const).map((mode) => <Pressable accessibilityRole="button" accessibilityState={{ selected: viewMode === mode }} key={mode} style={[styles.modeButton, viewMode === mode && styles.modeButtonActive]} onPress={() => setViewMode(mode)}><Text style={[styles.modeText, viewMode === mode && styles.modeTextActive]}>{mode.toUpperCase()}</Text></Pressable>)}</View>
         <View style={styles.signalCard}>
           <View style={styles.signalHeader}>
             <View>
