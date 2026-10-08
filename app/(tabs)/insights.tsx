@@ -125,7 +125,7 @@ export default function InsightsScreen() {
             <View style={styles.sectionHeaderCopy}>
               <Text style={styles.signalEyebrow}>SUPPLY RESERVOIR</Text>
               <Text style={styles.cardTitle}>What remains</Text>
-              <Text style={styles.detail}>A forecast from the inventory and dose values you entered.</Text>
+              <Text style={styles.detail}>A projection from your entered inventory and schedule; no date means the threshold was not reached in the 365-day forecast.</Text>
             </View>
             {nextSupply ? <Text style={styles.sectionCount}>{supply.length}</Text> : null}
           </View>
@@ -142,7 +142,7 @@ export default function InsightsScreen() {
                 <View style={styles.supplyMeta}>
                   <Text style={styles.supplyDose}>~{item.dosesRemaining} DOSES</Text>
                   <Text style={[styles.forecast, item.projectedLowInDays === 0 && styles.warningText]}>
-                    {item.projectedLowInDays === null ? '365+D' : item.projectedLowInDays === 0 ? 'LOW NOW' : `~${item.projectedLowInDays}D`}
+                    {item.projectedLowInDays === null ? 'NO DATE' : item.projectedLowInDays === 0 ? 'LOW NOW' : `~${item.projectedLowInDays}D`}
                   </Text>
                 </View>
               </View>
