@@ -3,6 +3,7 @@ name: Repair Pulse native icon
 on:
   push:
     branches:
+      - main
       - nova/repair-broken-ios-icon-asset
     paths:
       - ".github/workflows/repair-pulse-icon.yml"
@@ -64,5 +65,5 @@ jobs:
           git add assets/icon.png
           if ! git diff --cached --quiet; then
             git commit -m "fix: replace incompatible iOS icon with validated RGB PNG"
-            git push origin HEAD:nova/repair-broken-ios-icon-asset
+            git push origin HEAD:${GITHUB_REF_NAME}
           fi
