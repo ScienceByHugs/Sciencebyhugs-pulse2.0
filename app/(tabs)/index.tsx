@@ -33,7 +33,8 @@ export default function TodayScreen() {
       setAllItems(items);
       setTodayLogs(logs);
       const dueItems = items.filter((item) => isDueOnDate(item.schedule));
-      const nextTime = dueItems.length ? timeLabel(scheduleTime(dueItems[0]?.schedule ?? {})) : 'Open Pulse';
+      const nextWindow = nextScheduledTimeToday(dueItems.map((item) => item.schedule));
+      const nextTime = nextWindow ? timeLabel(nextWindow) : dueItems.length ? 'Any time' : 'Open Pulse';
       await Promise.all([rescheduleReminders(items), updatePulseTodayWidget(dueItems.length, nextTime)]);
       setRecentSites(sites);
       setSelectedSites((current) => {
@@ -76,6 +77,9 @@ export default function TodayScreen() {
       completedIds
     };
   }, [items, todayLogs]);
+
+  const pendingItems = useMemo(() => items.filter((item) => !completion.completedIds.has(item.id)), [items, completion.completedIds]);
+  const completedItems = useMemo(() => items.filter((item) => completion.completedIds.has(item.id)), [items, completion.completedIds]);
 
   const dayBrief = useMemo(() => {
     const lowSupply = allItems.filter((item) => {
@@ -165,7 +169,7 @@ export default function TodayScreen() {
                 <Text style={styles.briefEyebrow}>DAY SIGNAL</Text>
                 <Text style={styles.daySignalTitle}>{completion.due ? `${completion.completed} of ${completion.due} logged` : 'Nothing due today'}</Text>
               </View>
-              <Text style={styles.daySignalPercent}>{completion.percent}%</Text>
+              <Text style={styles.daySignalPercent}>{completion.due ? `${completion.percent}%` : 'CLEAR'}</Text>
             </View>
             <View style={styles.daySignalTrack}>
               <View style={[styles.daySignalFill, { width: `${completion.percent}%` as `${number}%` }]} />
@@ -216,7 +220,7 @@ export default function TodayScreen() {
           </View>
         ) : null}
 
-        {items.map((item, index) => {
+        {[...pendingItems, ...completedItems].map((item, index) => {
           const inventory = item.inventory_containers?.find((container) => container.is_active);
           const low = inventory ? inventory.remaining_amount <= inventory.low_threshold : false;
           const estimatedDoses = inventory && item.dose_amount > 0 ? Math.floor(inventory.remaining_amount / item.dose_amount) : null;
@@ -224,7 +228,7 @@ export default function TodayScreen() {
 
           return (
             <View key={item.id}>
-              <Text style={styles.sectionLabel}>{index === 0 ? 'NEXT' : 'TODAY'}</Text>
+              <Text style={styles.sectionLabel}>{completion.completedIds.has(item.id) ? (index === pendingItems.length ? 'COMPLETED TODAY' : 'COMPLETED') : (index === 0 ? 'UP NEXT' : 'UPCOMING')}</Text>
               <View style={[styles.heroCard, low && styles.lowCard, completion.completedIds.has(item.id) && styles.completedCard]}>
                 <View style={styles.heroTop}>
                   <View style={{ flex: 1 }}>
