@@ -1,12 +1,5 @@
-import { isDueOnDate } from '@/domain/schedule';
+import { isDueOnDate, localDateKey } from '@/domain/schedule';
 import type { TimelineEntry, TodayItem } from '@/services/pulse';
-
-function localDateKey(date: Date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
 
 export function calculateSevenDayConsistency(items: TodayItem[], logs: TimelineEntry[]) {
   const due = new Set<string>();
@@ -19,6 +12,8 @@ export function calculateSevenDayConsistency(items: TodayItem[], logs: TimelineE
     const key = localDateKey(day);
 
     for (const item of items) {
+      // A newly tracked item cannot be due before it was created.
+      if (item.created_at && key < localDateKey(new Date(item.created_at))) continue;
       if (isDueOnDate(item.schedule, day)) due.add(`${item.id}:${key}`);
     }
   }
