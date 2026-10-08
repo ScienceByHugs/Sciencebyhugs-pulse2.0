@@ -137,7 +137,7 @@ export default function InsightsScreen() {
               </View>
               <View style={styles.reservoir}>
                 <View style={styles.reservoirRail}>
-                  <View style={[styles.reservoirFill, { width: `${Math.max(6, Math.min(100, item.dosesRemaining * 8))}%` as `${number}%` }, item.projectedLowInDays === 0 && styles.reservoirFillLow]} />
+                  <View style={[styles.reservoirFill, { width: `${Math.max(0, Math.min(100, item.total > 0 ? item.remaining / item.total * 100 : 0))}%` as `${number}%` }, item.projectedLowInDays === 0 && styles.reservoirFillLow]} />
                 </View>
                 <View style={styles.supplyMeta}>
                   <Text style={styles.supplyDose}>~{item.dosesRemaining} DOSES</Text>
