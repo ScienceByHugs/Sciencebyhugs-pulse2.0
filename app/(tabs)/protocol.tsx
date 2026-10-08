@@ -385,7 +385,8 @@ export default function ProtocolScreen() {
             {activeProtocol ? items.filter((item) => item.protocol_id === activeProtocol.id).map((item) => {
               const inventoryItem = item.inventory_containers?.find((container) => container.is_active);
               return (
-                <View style={styles.itemCard} key={item.id}>
+                <View key={item.id}>
+                <View style={styles.itemCard}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.itemTitle}>{item.name}</Text>
                     <Text style={styles.cardDetail}>{item.category || 'Substance'} · {item.dose_amount} {item.dose_unit} · {item.route}</Text>
@@ -409,6 +410,7 @@ export default function ProtocolScreen() {
                     </View>
                   </View>
                 ) : null}
+                </View>
               );
             }) : null}
           </>
