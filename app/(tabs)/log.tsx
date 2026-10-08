@@ -17,6 +17,8 @@ export default function LogScreen() {
   const [protocols, setProtocols] = useState<TrackedProtocol[]>([]);
   const [protocolItems, setProtocolItems] = useState<TodayItem[]>([]);
   const [selectedProtocol, setSelectedProtocol] = useState<string | null>(null);
+  const [monthOffset, setMonthOffset] = useState(0);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month' | 'year' | 'cycle' | 'all'>('week');
 
   const load = useCallback(async () => {
@@ -44,17 +46,50 @@ export default function LogScreen() {
     });
   }, [entries, protocolItems, protocols, selectedProtocol]);
 
+  const monthDate = useMemo(() => {
+    const date = new Date();
+    date.setDate(1);
+    date.setHours(12, 0, 0, 0);
+    date.setMonth(date.getMonth() + monthOffset);
+    return date;
+  }, [monthOffset]);
+
+  const monthGrid = useMemo(() => {
+    const year = monthDate.getFullYear();
+    const month = monthDate.getMonth();
+    const firstWeekday = new Date(year, month, 1).getDay();
+    const dayCount = new Date(year, month + 1, 0).getDate();
+    const counts = new Map<string, number>();
+    for (const entry of entries) {
+      const key = localDateKey(new Date(entry.logged_at));
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    const cells = Array.from({ length: Math.ceil((firstWeekday + dayCount) / 7) * 7 }, (_, index) => {
+      const day = index - firstWeekday + 1;
+      if (day < 1 || day > dayCount) return null;
+      const date = new Date(year, month, day, 12);
+      const key = localDateKey(date);
+      return { day, key, count: counts.get(key) ?? 0, today: key === localDateKey() };
+    });
+    return cells;
+  }, [entries, monthDate]);
+
   const filteredEntries = useMemo(() => {
     const now = new Date();
     if (viewMode === 'all') return entries;
+    if (viewMode === 'month') {
+      return entries.filter((entry) => {
+        const logged = localDateKey(new Date(entry.logged_at));
+        return selectedDay ? logged === selectedDay : logged.slice(0, 7) === localDateKey(monthDate).slice(0, 7);
+      });
+    }
     if (viewMode === 'cycle') return cycleEntries;
     const start = new Date(now);
     start.setHours(0, 0, 0, 0);
     if (viewMode === 'week') start.setDate(start.getDate() - 6);
-    if (viewMode === 'month') start.setDate(1);
     if (viewMode === 'year') start.setMonth(0, 1);
     return entries.filter((entry) => new Date(entry.logged_at) >= start);
-  }, [entries, cycleEntries, viewMode]);
+  }, [entries, cycleEntries, viewMode, monthDate, selectedDay]);
 
   const activity = useMemo(() => {
     const now = new Date();
@@ -96,7 +131,39 @@ export default function LogScreen() {
         <Text style={styles.title}>Timeline</Text>
         <Text style={styles.body}>A clear record of what you logged, when you logged it, and where.</Text>
 
-        <View style={styles.modeStrip}>{(['day', 'week', 'month', 'year', 'cycle', 'all'] as const).map((mode) => <Pressable accessibilityRole="button" accessibilityState={{ selected: viewMode === mode }} key={mode} style={[styles.modeButton, viewMode === mode && styles.modeButtonActive]} onPress={() => setViewMode(mode)}><Text style={[styles.modeText, viewMode === mode && styles.modeTextActive]}>{mode.toUpperCase()}</Text></Pressable>)}</View>
+        <View style={styles.modeStrip}>{(['day', 'week', 'month', 'year', 'cycle', 'all'] as const).map((mode) => <Pressable accessibilityRole="button" accessibilityState={{ selected: viewMode === mode }} key={mode} style={[styles.modeButton, viewMode === mode && styles.modeButtonActive]} onPress={() => { setViewMode(mode); if (mode === 'month') setSelectedDay(null); }}><Text style={[styles.modeText, viewMode === mode && styles.modeTextActive]}>{mode.toUpperCase()}</Text></Pressable>)}</View>
+        {viewMode === 'month' ? (
+          <View style={styles.calendarCard}>
+            <View style={styles.calendarHeader}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.signalEyebrow}>MONTHLY ACTIVITY / RECORD</Text>
+                <Text style={styles.calendarMonth}>{monthDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</Text>
+              </View>
+              <Pressable accessibilityRole="button" accessibilityLabel="Previous month" style={styles.monthNav} onPress={() => { setMonthOffset((value) => value - 1); setSelectedDay(null); }}><Text style={styles.monthNavText}>‹</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Next month" style={styles.monthNav} onPress={() => { setMonthOffset((value) => value + 1); setSelectedDay(null); }}><Text style={styles.monthNavText}>›</Text></Pressable>
+            </View>
+            <View style={styles.calendarGrid}>
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                <View key={index} style={styles.calendarCell}><Text style={styles.calendarWeekday}>{day}</Text></View>
+              ))}
+              {monthGrid.map((cell, index) => (
+                <View key={cell?.key ?? `blank-${index}`} style={styles.calendarCell}>
+                  {cell ? <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`${cell.key}, ${cell.count} recorded events`}
+                    accessibilityState={{ selected: selectedDay === cell.key }}
+                    onPress={() => setSelectedDay((current) => current === cell.key ? null : cell.key)}
+                    style={[styles.calendarDay, cell.today && styles.calendarToday, selectedDay === cell.key && styles.calendarSelected]}
+                  >
+                    <Text style={[styles.calendarDayText, (cell.count > 0 || selectedDay === cell.key) && styles.calendarDayTextActive]}>{cell.day}</Text>
+                    <View style={[styles.calendarDot, cell.count > 0 && styles.calendarDotActive]} />
+                  </Pressable> : null}
+                </View>
+              ))}
+            </View>
+            <Text style={styles.calendarFoot}>{selectedDay ? `FILTERED · ${selectedDay} · TAP AGAIN TO SEE MONTH` : 'TAP A DATE TO VIEW ITS ENTRIES · DOTS MARK RECORDED ACTIVITY'}</Text>
+          </View>
+        ) : null}
         {viewMode === 'cycle' ? (
           <View style={styles.cycleSelector}>
             <Text style={styles.signalEyebrow}>SELECT PROTOCOL / CYCLE</Text>
@@ -167,6 +234,22 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   page: { padding: layout.pageInset, paddingBottom: layout.pageBottom },
   modeStrip: { flexDirection: 'row', gap: 5, marginBottom: 14 },
+  calendarCard: { backgroundColor: colors.bgElevated, borderRadius: radius.xl, borderColor: colors.accentBorder, borderWidth: 1, padding: spacing.md, marginBottom: spacing.md },
+  calendarHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: spacing.lg },
+  calendarMonth: { fontSize: 22, lineHeight: 29, color: colors.text, fontWeight: '900', letterSpacing: -0.5, marginTop: 5 },
+  monthNav: { width: 44, height: 44, backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentBorder, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  monthNavText: { color: colors.accent, fontSize: 28, lineHeight: 32, fontWeight: '700' },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  calendarCell: { width: '14.2857%', alignItems: 'center', justifyContent: 'center', minHeight: 48, paddingVertical: 3 },
+  calendarWeekday: { color: colors.subtle, fontSize: 11, fontWeight: '900' },
+  calendarDay: { minHeight: 44, width: '92%', maxWidth: 46, borderRadius: radius.md, justifyContent: 'center', alignItems: 'center', gap: 3, borderWidth: 1, borderColor: 'transparent' },
+  calendarToday: { borderColor: colors.accentBorder },
+  calendarSelected: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
+  calendarDayText: { color: colors.muted, fontSize: 13, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  calendarDayTextActive: { color: colors.text },
+  calendarDot: { height: 4, width: 4, borderRadius: 2, backgroundColor: 'transparent' },
+  calendarDotActive: { backgroundColor: colors.accent },
+  calendarFoot: { color: colors.muted, fontSize: 9, fontWeight: '800', letterSpacing: 0.4, marginTop: 12, lineHeight: 16 },
   cycleSelector: { backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.accentBorder, borderRadius: radius.lg, padding: layout.cardInset, marginBottom: spacing.md, gap: 10 },
   cycleOptions: { flexDirection: 'row', gap: 8, paddingVertical: 2 },
   cyclePill: { backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 11, minHeight: 42 },
