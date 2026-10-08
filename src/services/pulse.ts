@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { localDateKey } from '@/domain/schedule';
 import { enqueueQuickLog, readOutbox, removeQuickLog, type QuickLogPayload } from '@/lib/outbox';
 
 export type InventorySummary = {
@@ -134,13 +135,19 @@ export async function listProtocolItems(protocolId?: string) {
 export async function listTodayItems() {
   const { data, error } = await supabase
     .from('protocol_items')
-    .select('id,protocol_id,created_at,name,category,route,dose_amount,dose_unit,schedule,site_rotation_enabled,inventory_containers(id,remaining_amount,total_amount,unit,low_threshold,is_active),protocols!inner(status)')
+    .select('id,protocol_id,created_at,name,category,route,dose_amount,dose_unit,schedule,site_rotation_enabled,inventory_containers(id,remaining_amount,total_amount,unit,low_threshold,is_active),protocols!inner(status,starts_on,ends_on)')
     .eq('active', true)
     .eq('protocols.status', 'active')
     .order('created_at', { ascending: true });
 
   if (error) throw error;
-  return data as unknown as TodayItem[];
+  const today = localDateKey();
+  const current = (data ?? []).filter((row) => {
+    const protocol = row.protocols as unknown as { starts_on: string | null; ends_on: string | null };
+    return (!protocol.starts_on || today >= protocol.starts_on) &&
+      (!protocol.ends_on || today <= protocol.ends_on);
+  });
+  return current as unknown as TodayItem[];
 }
 
 type CreateItemInput = {
