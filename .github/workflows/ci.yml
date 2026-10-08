@@ -18,3 +18,15 @@ jobs:
       # Reanimated 4.7 tests RN 0.88 RC but its npm peer range excludes prerelease semver.
       - run: npm ci --legacy-peer-deps --ignore-scripts
       - run: npm run typecheck
+      - name: Validate iOS home-screen icon PNG
+        run: |
+          python3 -m pip install --quiet --break-system-packages Pillow
+          python3 - <<'PY'
+          from PIL import Image
+          with Image.open('assets/icon.png') as icon:
+              icon.load()
+              assert icon.size == (1024, 1024), f'Unexpected size: {icon.size}'
+              assert icon.mode == 'RGB', f'Expected RGB, got {icon.mode}'
+              assert icon.format == 'PNG', f'Expected PNG, got {icon.format}'
+              print('Pulse native icon decoded successfully: 1024x1024 RGB PNG')
+          PY
