@@ -159,7 +159,7 @@ export default function TodayScreen() {
       >
         <PulseMenu />
 
-        <Animated.View style={[styles.heroHeader, { opacity: entrance, transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }]}]}>
+        <Animated.View style={[styles.heroHeader, { opacity: entrance, transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }]}>
           <Animated.View pointerEvents="none" style={[styles.completionPulse, {
             opacity: completionPulse.interpolate({ inputRange: [0, 1], outputRange: [0, .24] }),
             transform: [{ scale: completionPulse.interpolate({ inputRange: [0, 1], outputRange: [.72, 1.18] }) }]
