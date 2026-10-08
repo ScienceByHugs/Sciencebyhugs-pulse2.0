@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
-import { ActivityIndicator, Alert, Animated, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { AccessibilityInfo, ActivityIndicator, Alert, Animated, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, layout, radius, spacing, type } from '@/theme';
 import { PulseMenu } from '@/components/PulseMenu';
 import { flushQuickLogOutbox, listDoseLogs, listRecentSites, listTodayItems, quickLog, type TimelineEntry, type TodayItem } from '@/services/pulse';
@@ -9,6 +9,7 @@ import { sitesForRoute, suggestSite } from '@/domain/sites';
 import { rescheduleReminders } from '@/lib/reminders';
 import { updatePulseTodayWidget } from '@/lib/widgets';
 import { useAuth } from '@/providers/AuthProvider';
+import { calculateSevenDayConsistency } from '@/domain/insights';
 
 function timeLabel(value?: string) {
   if (!value) return 'Any time';
@@ -20,6 +21,8 @@ function timeLabel(value?: string) {
 
 export default function TodayScreen() {
   const { session } = useAuth();
+  const router = useRouter();
+  const entrance = useRef(new Animated.Value(0)).current;
   const firstName = String(session?.user.user_metadata?.first_name ?? session?.user.user_metadata?.full_name ?? '').trim().split(/\s+/)[0] || '';
   const [allItems, setAllItems] = useState<TodayItem[]>([]);
   const [todayLogs, setTodayLogs] = useState<TimelineEntry[]>([]);
@@ -58,7 +61,14 @@ export default function TodayScreen() {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  useFocusEffect(useCallback(() => {
+    void load();
+    AccessibilityInfo.isReduceMotionEnabled().then((reduced) => {
+      entrance.stopAnimation();
+      entrance.setValue(reduced ? 1 : 0);
+      if (!reduced) Animated.timing(entrance, { toValue: 1, duration: 440, useNativeDriver: true }).start();
+    }).catch(() => entrance.setValue(1));
+  }, [load, entrance]));
 
   const items = useMemo(
     () => allItems
@@ -137,6 +147,7 @@ export default function TodayScreen() {
     }
   }
 
+  const consistency = useMemo(() => calculateSevenDayConsistency(allItems, todayLogs), [allItems, todayLogs]);
   const dateLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 
   return (
@@ -148,13 +159,14 @@ export default function TodayScreen() {
       >
         <PulseMenu />
 
-        <View style={styles.heroHeader}>
+        <Animated.View style={[styles.heroHeader, { opacity: entrance, transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }]}]}>
           <Animated.View pointerEvents="none" style={[styles.completionPulse, {
             opacity: completionPulse.interpolate({ inputRange: [0, 1], outputRange: [0, .24] }),
             transform: [{ scale: completionPulse.interpolate({ inputRange: [0, 1], outputRange: [.72, 1.18] }) }]
           }]} />
+          <Text style={styles.heroKicker}>THE DAILY EDITION · SCIENCE BY HUGS</Text>
           <Text style={styles.greeting}>{firstName ? `Welcome back, ${firstName}.` : 'Welcome to Pulse.'}</Text>
-          <Text style={styles.welcomeSignature}>SCIENCE BY HUGS · YOUR PROTOCOLS, IN MOTION</Text>
+          <Text style={styles.welcomeSignature}>YOUR PROTOCOLS. YOUR RHYTHM. YOUR RECORD.</Text>
           <Text style={styles.date}>{dateLabel}</Text>
           <View style={styles.summaryRow}>
             <View style={styles.summaryCell}><Text style={styles.summaryNumber}>{items.length}</Text><Text style={styles.summaryLabel}>DUE TODAY</Text></View>
@@ -162,7 +174,84 @@ export default function TodayScreen() {
             <View style={styles.summaryCell}><Text style={styles.summaryNumber}>{allItems.length}</Text><Text style={styles.summaryLabel}>ACTIVE ITEMS</Text></View>
           </View>
 
-          <View style={styles.daySignalCard}>
+          <View style={styles.heroFooter}>
+            <View style={styles.heroFooterBar} />
+            <Text style={styles.heroFooterText}>{pendingItems.length ? `${pendingItems.length} AWAITING YOUR LOG` : 'YOUR DAY, AT A GLANCE'}</Text>
+            <Text style={styles.heroFooterIndex}>SBH / 02</Text>
+          </View>
+        </Animated.View>
+
+        {loading && allItems.length === 0 ? <ActivityIndicator color={colors.accent} style={{ marginTop: 32 }} /> : null}
+
+        {!loading && items.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.cardTitle}>Nothing scheduled today.</Text>
+            <Text style={styles.detail}>{allItems.length ? 'Your active routine has no items due today.' : 'Create your first protocol in the Protocol tab to start tracking.'}</Text>
+          </View>
+        ) : null}
+
+        {allItems.length === 0 && !loading ? <Pressable accessibilityRole="button" style={styles.createAction} onPress={() => router.push('/(tabs)/protocol')}><Text style={styles.createActionText}>＋ CREATE YOUR FIRST PROTOCOL</Text><Text style={styles.createActionArrow}>↗</Text></Pressable> : null}
+
+        {[...pendingItems, ...completedItems].map((item, index) => {
+          const inventory = item.inventory_containers?.find((container) => container.is_active);
+          const low = inventory ? inventory.remaining_amount <= inventory.low_threshold : false;
+          const estimatedDoses = inventory && item.dose_amount > 0 ? Math.floor(inventory.remaining_amount / item.dose_amount) : null;
+          const site = selectedSites[item.id];
+
+          return (
+            <View key={item.id}>
+              <Text style={styles.sectionLabel}>{completion.completedIds.has(item.id) ? (index === pendingItems.length ? 'COMPLETED TODAY' : 'COMPLETED') : (index === 0 ? 'UP NEXT' : 'UPCOMING')}</Text>
+              <View style={[styles.heroCard, low && styles.lowCard, completion.completedIds.has(item.id) && styles.completedCard]}>
+                <View style={styles.heroTop}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.substanceKind}>{item.category?.toUpperCase() ?? 'TRACKED SUBSTANCE'}</Text>
+                    <Text style={styles.medName}>{item.name}</Text>
+                    <Text style={styles.detail}>{item.dose_amount} {item.dose_unit} · {item.route}</Text>
+                    {completion.completedIds.has(item.id) ? <Text style={styles.completedLabel}>LOGGED TODAY</Text> : null}
+                  </View>
+                  <View style={styles.duePill}><Text style={styles.dueText}>{timeLabel(scheduleTime(item.schedule))}</Text></View>
+                </View>
+
+                {site ? (
+                  <Pressable style={styles.siteRow} onPress={() => cycleSite(item)}>
+                    <View>
+                      <Text style={styles.smallLabel}>SITE</Text>
+                      <Text style={styles.siteText}>{site}</Text>
+                    </View>
+                    <Text style={styles.changeText}>CHANGE</Text>
+                  </Pressable>
+                ) : null}
+
+                {inventory ? (
+                  <View style={styles.inventoryRow}>
+                    <Text style={styles.inventoryText}>{inventory.remaining_amount} {inventory.unit} remaining</Text>
+                    <Text style={[styles.inventoryText, low && styles.lowText]}>{low ? 'LOW' : estimatedDoses !== null ? `~${estimatedDoses} doses` : ''}</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.inventoryText}>INVENTORY NOT TRACKED</Text>
+                )}
+
+                <Pressable
+                  style={[styles.primaryButton, loggingId === item.id && styles.disabled]}
+                  disabled={loggingId === item.id || Boolean(recentLogAt[item.id])}
+                  onPress={() => void log(item)}
+                >
+                  <Text style={styles.primaryButtonText}>{loggingId === item.id ? 'LOGGING…' : recentLogAt[item.id] ? 'LOGGED ✓' : completion.completedIds.has(item.id) ? 'LOG ANOTHER ENTRY' : 'CONFIRM LOG'}</Text>
+                </Pressable>
+              </View>
+            </View>
+          );
+        })}
+        <View style={styles.dashboardHeader}>
+          <Text style={styles.dashboardTitle}>Your daily signals</Text>
+          <Text style={styles.dashboardHint}>A useful summary, below your actions.</Text>
+        </View>
+        <View style={styles.consistencyCard}>
+          <Text style={styles.briefEyebrow}>7-DAY RECORD</Text>
+          <Text style={styles.consistencyValue}>{consistency.due ? `${consistency.completed}/${consistency.due}` : '—'}</Text>
+          <Text style={styles.consistencyCaption}>{consistency.due ? 'Scheduled occurrences recorded' : 'No scheduled occurrences in this period'}</Text>
+        </View>
+        <View style={styles.dashboardSignals}>          <View style={styles.daySignalCard}>
             <View style={styles.daySignalHeader}>
               <View>
                 <Text style={styles.briefEyebrow}>DAY SIGNAL</Text>
@@ -210,64 +299,6 @@ export default function TodayScreen() {
           </View>
         </View>
 
-        {loading && allItems.length === 0 ? <ActivityIndicator color={colors.accent} style={{ marginTop: 32 }} /> : null}
-
-        {!loading && items.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.cardTitle}>Nothing scheduled today.</Text>
-            <Text style={styles.detail}>{allItems.length ? 'Your active routine has no items due today.' : 'Create your first protocol in the Protocol tab to start tracking.'}</Text>
-          </View>
-        ) : null}
-
-        {[...pendingItems, ...completedItems].map((item, index) => {
-          const inventory = item.inventory_containers?.find((container) => container.is_active);
-          const low = inventory ? inventory.remaining_amount <= inventory.low_threshold : false;
-          const estimatedDoses = inventory && item.dose_amount > 0 ? Math.floor(inventory.remaining_amount / item.dose_amount) : null;
-          const site = selectedSites[item.id];
-
-          return (
-            <View key={item.id}>
-              <Text style={styles.sectionLabel}>{completion.completedIds.has(item.id) ? (index === pendingItems.length ? 'COMPLETED TODAY' : 'COMPLETED') : (index === 0 ? 'UP NEXT' : 'UPCOMING')}</Text>
-              <View style={[styles.heroCard, low && styles.lowCard, completion.completedIds.has(item.id) && styles.completedCard]}>
-                <View style={styles.heroTop}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.medName}>{item.name}</Text>
-                    <Text style={styles.detail}>{item.dose_amount} {item.dose_unit} · {item.route}</Text>
-                    {completion.completedIds.has(item.id) ? <Text style={styles.completedLabel}>LOGGED TODAY</Text> : null}
-                  </View>
-                  <View style={styles.duePill}><Text style={styles.dueText}>{timeLabel(scheduleTime(item.schedule))}</Text></View>
-                </View>
-
-                {site ? (
-                  <Pressable style={styles.siteRow} onPress={() => cycleSite(item)}>
-                    <View>
-                      <Text style={styles.smallLabel}>SITE</Text>
-                      <Text style={styles.siteText}>{site}</Text>
-                    </View>
-                    <Text style={styles.changeText}>CHANGE</Text>
-                  </Pressable>
-                ) : null}
-
-                {inventory ? (
-                  <View style={styles.inventoryRow}>
-                    <Text style={styles.inventoryText}>{inventory.remaining_amount} {inventory.unit} remaining</Text>
-                    <Text style={[styles.inventoryText, low && styles.lowText]}>{low ? 'LOW' : estimatedDoses !== null ? `~${estimatedDoses} doses` : ''}</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.inventoryText}>No inventory attached · logging still available</Text>
-                )}
-
-                <Pressable
-                  style={[styles.primaryButton, loggingId === item.id && styles.disabled]}
-                  disabled={loggingId === item.id || Boolean(recentLogAt[item.id])}
-                  onPress={() => void log(item)}
-                >
-                  <Text style={styles.primaryButtonText}>{loggingId === item.id ? 'LOGGING…' : recentLogAt[item.id] ? 'LOGGED ✓' : 'LOG DOSE'}</Text>
-                </Pressable>
-              </View>
-            </View>
-          );
-        })}
       </ScrollView>
     </SafeAreaView>
   );
@@ -282,7 +313,23 @@ const styles = StyleSheet.create({
   livePill: { borderRadius: 999, borderWidth: 1, borderColor: colors.accentBorder, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.accentSoft },
   liveText: { color: colors.accent, fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
   completionPulse: { position: 'absolute', top: 86, alignSelf: 'center', width: 210, height: 210, borderRadius: 105, borderWidth: 1, borderColor: colors.accent },
-  heroHeader: { marginBottom: spacing.sm },
+  heroHeader: { marginBottom: spacing.sm, borderRadius: radius.xl, padding: spacing.md, backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.accentBorder, overflow: 'hidden' },
+  heroKicker: { color: colors.accent, fontSize: type.eyebrow, fontWeight: '900', letterSpacing: 1.6, marginBottom: 8 },
+  heroFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 13, gap: 8 },
+  heroFooterBar: { width: 18, height: 3, backgroundColor: colors.success, borderRadius: 2 },
+  heroFooterText: { flex: 1, color: colors.muted, fontSize: 9, fontWeight: '900', letterSpacing: .7 },
+  heroFooterIndex: { color: colors.subtle, fontSize: 9, fontWeight: '900', letterSpacing: .7 },
+  substanceKind: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1.3, marginBottom: 5 },
+  createAction: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 56, backgroundColor: colors.accent, paddingHorizontal: spacing.md, borderRadius: radius.lg },
+  createActionText: { color: colors.bg, fontSize: 12, fontWeight: '900', letterSpacing: .6 },
+  createActionArrow: { color: colors.bg, fontSize: 23, fontWeight: '800' },
+  dashboardHeader: { marginTop: spacing.lg },
+  dashboardTitle: { color: colors.text, fontSize: 21, fontWeight: '900', letterSpacing: -.6 },
+  dashboardHint: { color: colors.muted, fontSize: 12, marginTop: 3 },
+  dashboardSignals: { gap: spacing.sm },
+  consistencyCard: { padding: spacing.md, borderRadius: radius.xl, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border },
+  consistencyValue: { color: colors.text, fontSize: 29, lineHeight: 35, fontWeight: '900', fontVariant: ['tabular-nums'], marginTop: 5 },
+  consistencyCaption: { color: colors.muted, fontSize: 11, marginTop: 3 },
   daySignalCard: { marginTop: spacing.sm, backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.accentBorder, borderRadius: radius.xl, padding: spacing.md },
   daySignalHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
   daySignalTitle: { color: colors.text, fontSize: 15, fontWeight: '900', marginTop: 3 },
@@ -319,17 +366,17 @@ const styles = StyleSheet.create({
   lowCard: { borderColor: '#8f6b3d' },
   completedCard: { borderColor: colors.accentBorder, backgroundColor: colors.bgElevated },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md },
-  medName: { color: colors.text, fontSize: 22, fontWeight: '700' },
+  medName: { color: colors.text, fontSize: 20, fontWeight: '800', flexShrink: 1 },
   completedLabel: { color: colors.success, fontSize: 9, fontWeight: '900', letterSpacing: 1.1, marginTop: 7 },
   detail: { color: colors.muted, marginTop: 4, fontSize: 13, lineHeight: 19 },
-  duePill: { backgroundColor: colors.accentSoft, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
+  duePill: { backgroundColor: colors.accentSoft, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, maxWidth: 95, alignItems: 'center' },
   dueText: { color: colors.accent, fontSize: 10, fontWeight: '900', letterSpacing: .7, fontVariant: ['tabular-nums'] },
   siteRow: { backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   smallLabel: { color: colors.muted, fontSize: 9, fontWeight: '900', letterSpacing: 1.3 },
   siteText: { color: colors.text, fontSize: 14, fontWeight: '700', marginTop: 3 },
   changeText: { color: colors.accent, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
   inventoryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
-  inventoryText: { color: colors.muted, fontSize: 12, lineHeight: 18, fontVariant: ['tabular-nums'] },
+  inventoryText: { color: colors.muted, fontSize: 12, lineHeight: 18, fontVariant: ['tabular-nums'], flexShrink: 1 },
   lowText: { color: '#f6bd75', fontWeight: '900' },
   primaryButton: { backgroundColor: colors.accent, borderRadius: radius.md, paddingVertical: 16, alignItems: 'center', marginTop: 2 },
   primaryButtonText: { color: '#03111f', fontWeight: '900', letterSpacing: 1.1 },
