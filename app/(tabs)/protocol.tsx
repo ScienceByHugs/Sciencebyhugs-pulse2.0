@@ -3,6 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, layout, radius, spacing, type } from '@/theme';
 import { PulseMenu } from '@/components/PulseMenu';
+import { SubstanceArtwork } from '@/components/SubstanceArtwork';
 import { createProtocol, createProtocolItem, listProtocolItems, listProtocols, setProtocolItemActive, updateProtocolItemDetails, updateProtocolDetails, updateProtocolStatus, type TodayItem } from '@/services/pulse';
 import { formatSchedule, isDueOnDate, localDateKey, scheduleTime } from '@/domain/schedule';
 
@@ -430,35 +431,71 @@ export default function ProtocolScreen() {
               </View>
             ) : null}
 
-            {activeProtocol ? <Text style={styles.smallLabel}>YOUR SUBSTANCES · {activeItems.filter((item) => item.active !== false).length} ACTIVE</Text> : null}
-            {activeProtocol ? items.filter((item) => item.protocol_id === activeProtocol.id).map((item) => {
-              const inventoryItem = item.inventory_containers?.find((container) => container.is_active);
-              return (
-                <View key={item.id}>
-                <View style={styles.itemCard}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.itemTitle}>{item.name}</Text>
-                    <Text style={styles.cardDetail}>{item.category || 'Substance'} · {item.dose_amount} {item.dose_unit} · {item.route}</Text>
-                    <Text style={styles.scheduleText}>{formatSchedule(item.schedule)}</Text>
-                  </View>
-                  <View style={styles.stockBlock}>
-                    <Text style={styles.stock}>{inventoryItem ? `${inventoryItem.remaining_amount} ${inventoryItem.unit}` : 'No stock'}</Text>
-                    <Text style={styles.itemStatus}>{item.active === false ? 'PAUSED' : 'TRACKING'}</Text>
-                    <Pressable accessibilityRole="button" disabled={busy} onPress={() => startEdit(item)} style={styles.smallItemAction}><Text style={styles.smallItemActionText}>EDIT</Text></Pressable>
-                    <Pressable accessibilityRole="button" disabled={busy} onPress={() => void toggleItem(item)} style={styles.smallItemAction}><Text style={styles.smallItemActionText}>{item.active === false ? 'RESUME' : 'PAUSE'}</Text></Pressable>
-                  </View>
+            {activeProtocol ? (
+              <View style={styles.libraryHeading}>
+                <View>
+                  <Text style={styles.libraryKicker}>SCIENCE BY HUGS · LIBRARY</Text>
+                  <Text style={styles.libraryTitle}>Your substances</Text>
+                  <Text style={styles.librarySubtitle}>{activeItems.filter((item) => item.active !== false).length} tracking · {activeItems.filter((item) => item.active === false).length} paused</Text>
                 </View>
-                {editingItemId === item.id ? (
-                  <View style={styles.editCard} key={`edit-${item.id}`}>
-                    <Text style={styles.smallLabel}>EDIT SUBSTANCE · {item.name}</Text>
-                    <TextInput accessibilityLabel="Substance name" style={styles.input} maxLength={100} value={editItemName} onChangeText={setEditItemName} />
-                    <View style={styles.chips}>{CATEGORIES.map((cat) => <Pressable key={cat} onPress={() => setEditCategory(cat)} style={[styles.chip, editCategory === cat && styles.chipActive]}><Text style={[styles.chipText, editCategory === cat && styles.chipTextActive]}>{cat}</Text></Pressable>)}</View>
-                    <View style={styles.builderNav}>
-                      <Pressable style={styles.backButton} disabled={busy} onPress={() => setEditingItemId(null)}><Text style={styles.backText}>CANCEL</Text></Pressable>
-                      <Pressable style={[styles.primary, styles.flex]} disabled={busy} onPress={() => void saveItemEdit()}><Text style={styles.primaryText}>SAVE DETAILS</Text></Pressable>
+                <Text style={styles.libraryIndex}>SBH / 03</Text>
+              </View>
+            ) : null}
+            {activeProtocol ? activeItems.map((item) => {
+              const inventoryItem = item.inventory_containers?.find((container) => container.is_active);
+              const isLow = inventoryItem ? inventoryItem.remaining_amount <= inventoryItem.low_threshold : false;
+              const fraction = inventoryItem && inventoryItem.total_amount > 0
+                ? Math.max(0, Math.min(100, inventoryItem.remaining_amount / inventoryItem.total_amount * 100))
+                : 0;
+              return (
+                <View key={item.id} style={[styles.signatureCard, item.active === false && styles.signatureCardPaused]}>
+                  <View style={styles.signatureAccent} />
+                  <View style={styles.signatureTop}>
+                    <SubstanceArtwork category={item.category} inactive={item.active === false} />
+                    <View style={styles.signatureHeaderText}>
+                      <Text style={styles.signatureCategory}>{(item.category || 'OTHER').toUpperCase()}  /  {item.active === false ? 'PAUSED' : 'TRACKING'}</Text>
+                      <Text style={styles.signatureName}>{item.name}</Text>
+                      <Text style={styles.signatureAmount}>{item.dose_amount} {item.dose_unit}  ·  {item.route}</Text>
                     </View>
                   </View>
-                ) : null}
+                  <View style={styles.signatureDivider} />
+                  <View style={styles.signatureMeta}>
+                    <View style={styles.signatureMetaColumn}>
+                      <Text style={styles.signatureMetaLabel}>SCHEDULE</Text>
+                      <Text style={styles.signatureMetaValue}>{formatSchedule(item.schedule)}</Text>
+                    </View>
+                    <View style={styles.signatureStockColumn}>
+                      <Text style={styles.signatureMetaLabel}>RESERVOIR</Text>
+                      <Text style={[styles.signatureStock, isLow && styles.signatureLow]}>{inventoryItem ? `${inventoryItem.remaining_amount} ${inventoryItem.unit}` : 'NOT TRACKED'}</Text>
+                    </View>
+                  </View>
+                  {inventoryItem ? (
+                    <View style={styles.signatureReservoir}>
+                      <View style={styles.signatureReservoirTrack}>
+                        <View style={[styles.signatureReservoirFill, { width: `${fraction}%` as `${number}%`, backgroundColor: isLow ? colors.warning : colors.accent }]} />
+                      </View>
+                      <Text style={styles.signatureReservoirFoot}>{isLow ? 'LOW STOCK · ' : ''}{Math.round(fraction)}% OF ORIGINAL CONTAINER QUANTITY</Text>
+                    </View>
+                  ) : null}
+                  <View style={styles.signatureActions}>
+                    <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${item.name}`} style={styles.signatureEditButton} disabled={busy} onPress={() => startEdit(item)}>
+                      <Text style={styles.signatureEditText}>EDIT DETAILS  ↗</Text>
+                    </Pressable>
+                    <Pressable accessibilityRole="button" accessibilityLabel={item.active === false ? `Resume ${item.name}` : `Pause ${item.name}`} style={styles.signaturePauseButton} disabled={busy} onPress={() => void toggleItem(item)}>
+                      <Text style={styles.signaturePauseText}>{item.active === false ? 'RESUME' : 'PAUSE'}</Text>
+                    </Pressable>
+                  </View>
+                  {editingItemId === item.id ? (
+                    <View style={styles.editCard}>
+                      <Text style={styles.smallLabel}>EDIT SUBSTANCE · {item.name}</Text>
+                      <TextInput accessibilityLabel="Substance name" style={styles.input} maxLength={100} value={editItemName} onChangeText={setEditItemName} />
+                      <View style={styles.chips}>{CATEGORIES.map((cat) => <Pressable accessibilityRole="button" accessibilityState={{ selected: editCategory === cat }} key={cat} onPress={() => setEditCategory(cat)} style={[styles.chip, editCategory === cat && styles.chipActive]}><Text style={[styles.chipText, editCategory === cat && styles.chipTextActive]}>{cat}</Text></Pressable>)}</View>
+                      <View style={styles.builderNav}>
+                        <Pressable style={styles.backButton} disabled={busy} onPress={() => setEditingItemId(null)}><Text style={styles.backText}>CANCEL</Text></Pressable>
+                        <Pressable style={[styles.primary, styles.flex]} disabled={busy} onPress={() => void saveItemEdit()}><Text style={styles.primaryText}>{busy ? 'SAVING…' : 'SAVE DETAILS'}</Text></Pressable>
+                      </View>
+                    </View>
+                  ) : null}
                 </View>
               );
             }) : null}
@@ -503,6 +540,36 @@ const styles = StyleSheet.create({
   smallItemAction: { borderColor: colors.accentBorder, backgroundColor: colors.accentSoft, borderWidth: 1, borderRadius: radius.sm, minWidth: 77, minHeight: 34, alignItems: 'center', justifyContent: 'center' },
   smallItemActionText: { color: colors.accent, fontSize: 10, fontWeight: '900' },
   editCard: { backgroundColor: colors.panel2, borderRadius: radius.lg, padding: spacing.md, borderColor: colors.accentBorder, borderWidth: 1, marginTop: 6, gap: 12 },
+  libraryHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', paddingVertical: spacing.md, gap: spacing.sm },
+  libraryKicker: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1.5, marginBottom: 5 },
+  libraryTitle: { color: colors.text, fontSize: 23, fontWeight: '900', letterSpacing: -0.7 },
+  librarySubtitle: { color: colors.muted, fontSize: 12, marginTop: 4 },
+  libraryIndex: { color: colors.subtle, fontSize: 9, fontWeight: '900', letterSpacing: 1.3 },
+  signatureCard: { backgroundColor: colors.panel, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border, padding: layout.cardInset, marginBottom: spacing.md, overflow: 'hidden', gap: 14 },
+  signatureCardPaused: { borderColor: colors.border, backgroundColor: colors.bgElevated },
+  signatureAccent: { position: 'absolute', left: 0, top: 22, bottom: 22, width: 3, borderRadius: 3, backgroundColor: colors.accent },
+  signatureTop: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  signatureHeaderText: { flex: 1, minWidth: 0, gap: 6 },
+  signatureCategory: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1.1 },
+  signatureName: { color: colors.text, fontSize: 21, fontWeight: '900', lineHeight: 26, letterSpacing: -0.5, flexShrink: 1 },
+  signatureAmount: { color: colors.muted, fontSize: 12, lineHeight: 17, textTransform: 'capitalize' },
+  signatureDivider: { height: 1, backgroundColor: colors.border },
+  signatureMeta: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  signatureMetaColumn: { flex: 1, minWidth: 0, gap: 5 },
+  signatureStockColumn: { flexShrink: 1, alignItems: 'flex-end', maxWidth: '43%', gap: 5 },
+  signatureMetaLabel: { color: colors.subtle, fontSize: 9, fontWeight: '900', letterSpacing: 1.1 },
+  signatureMetaValue: { color: colors.text, fontSize: 12, lineHeight: 18, fontWeight: '700' },
+  signatureStock: { color: colors.accent, fontSize: 13, fontWeight: '900', fontVariant: ['tabular-nums'], textAlign: 'right' },
+  signatureLow: { color: colors.warning },
+  signatureReservoir: { gap: 7 },
+  signatureReservoirTrack: { height: 5, borderRadius: radius.pill, backgroundColor: colors.border, overflow: 'hidden' },
+  signatureReservoirFill: { height: '100%', borderRadius: radius.pill },
+  signatureReservoirFoot: { color: colors.subtle, fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+  signatureActions: { flexDirection: 'row', gap: 9 },
+  signatureEditButton: { flex: 1, minHeight: 44, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10, backgroundColor: colors.accentSoft, borderRadius: radius.md, borderColor: colors.accentBorder, borderWidth: 1 },
+  signatureEditText: { color: colors.accent, fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
+  signaturePauseButton: { minWidth: 92, minHeight: 44, justifyContent: 'center', alignItems: 'center', borderRadius: radius.md, borderColor: colors.border, borderWidth: 1 },
+  signaturePauseText: { color: colors.muted, fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
   itemCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.md, borderWidth: 1, borderColor: colors.border, marginTop: 8 },
   itemTitle: { color: colors.text, fontSize: 16, fontWeight: '800' },
   stock: { color: colors.accent, fontWeight: '800', fontSize: 12, maxWidth: 92, textAlign: 'right', flexShrink: 1 },
