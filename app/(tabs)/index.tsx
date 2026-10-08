@@ -83,9 +83,9 @@ export default function TodayScreen() {
       return inventory ? inventory.remaining_amount <= inventory.low_threshold : false;
     }).length;
     const timedItems = items.filter((item) => Boolean(scheduleTime(item.schedule)));
-    const upcoming = nextScheduledTimeToday(items.map((item) => item.schedule));
+    const upcoming = nextScheduledTimeToday(items.filter((item) => !completion.completedIds.has(item.id)).map((item) => item.schedule));
     const untimedRemaining = items.some((item) => !scheduleTime(item.schedule) && !completion.completedIds.has(item.id));
-    const nextTime = upcoming ? timeLabel(upcoming) : untimedRemaining ? 'ANY TIME' : items.length ? 'COMPLETE' : 'CLEAR';
+    const nextTime = upcoming ? timeLabel(upcoming) : untimedRemaining ? 'ANY TIME' : items.length === 0 ? 'CLEAR' : completion.completed === items.length ? 'COMPLETE' : 'NO WINDOW';
     return { lowSupply, nextTime, scheduled: timedItems.length };
   }, [allItems, items, completion.completedIds]);
 
