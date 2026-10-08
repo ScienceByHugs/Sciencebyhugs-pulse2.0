@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { colors, radius, spacing, type } from '@/theme';
+import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { colors, layout, radius, spacing, type } from '@/theme';
+import { PulseMenu } from '@/components/PulseMenu';
 import { listDoseLogs, listTodayItems, type TimelineEntry, type TodayItem } from '@/services/pulse';
 import { calculateSevenDayConsistency, calculateSupplyForecast, siteRotationSummary } from '@/domain/insights';
 import { isDueOnDate } from '@/domain/schedule';
@@ -9,8 +10,6 @@ import { isDueOnDate } from '@/domain/schedule';
 export default function InsightsScreen() {
   const [items, setItems] = useState<TodayItem[]>([]);
   const [logs, setLogs] = useState<TimelineEntry[]>([]);
-  const [intendedDose, setIntendedDose] = useState('');
-  const [concentration, setConcentration] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -27,13 +26,6 @@ export default function InsightsScreen() {
   const consistency = useMemo(() => calculateSevenDayConsistency(items, logs), [items, logs]);
   const supply = useMemo(() => calculateSupplyForecast(items), [items]);
   const rotation = useMemo(() => siteRotationSummary(logs), [logs]);
-
-  const volume = useMemo(() => {
-    const dose = Number(intendedDose);
-    const strength = Number(concentration);
-    if (!Number.isFinite(dose) || !Number.isFinite(strength) || dose <= 0 || strength <= 0) return null;
-    return dose / strength;
-  }, [intendedDose, concentration]);
 
   const routineFingerprint = useMemo(() => {
     const today = new Date();
@@ -65,6 +57,7 @@ export default function InsightsScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <PulseMenu />
         <Text style={styles.eyebrow}>WHAT CHANGED</Text>
         <Text style={styles.title}>Insights</Text>
         <Text style={styles.body}>Useful observations from your own records. Pulse does not prescribe or recommend treatment.</Text>
@@ -154,39 +147,6 @@ export default function InsightsScreen() {
           )) : <Text style={styles.detail}>Add inventory to a protocol item to enable supply forecasting.</Text>}
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Dose → volume calculator</Text>
-          <Text style={styles.detail}>Enter the dose you already intend to use and the labeled concentration in matching mass units. Pulse only performs the arithmetic.</Text>
-          <View style={styles.twoCol}>
-            <View style={styles.flex}>
-              <Text style={styles.inputLabel}>INTENDED DOSE</Text>
-              <TextInput
-                style={styles.input}
-                value={intendedDose}
-                onChangeText={setIntendedDose}
-                placeholder="e.g. 100"
-                placeholderTextColor={colors.muted}
-                keyboardType="decimal-pad"
-              />
-            </View>
-            <View style={styles.flex}>
-              <Text style={styles.inputLabel}>CONCENTRATION / mL</Text>
-              <TextInput
-                style={styles.input}
-                value={concentration}
-                onChangeText={setConcentration}
-                placeholder="e.g. 250"
-                placeholderTextColor={colors.muted}
-                keyboardType="decimal-pad"
-              />
-            </View>
-          </View>
-          <View style={styles.result}>
-            <Text style={styles.inputLabel}>CALCULATED VOLUME</Text>
-            <Text style={styles.resultValue}>{volume === null ? '—' : `${Number(volume.toFixed(4))} mL`}</Text>
-          </View>
-          <Text style={styles.disclaimer}>This calculator does not determine what dose you should take. Verify units and labeling before relying on any calculation.</Text>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -194,11 +154,11 @@ export default function InsightsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  page: { padding: spacing.lg, paddingBottom: 148 },
-  eyebrow: { color: colors.accent, fontSize: 11, fontWeight: '900', letterSpacing: 1.8, marginTop: spacing.md },
-  title: { color: colors.text, fontSize: 31, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
-  body: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.md },
-  heroMetric: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.accentBorder, marginBottom: spacing.sm },
+  page: { padding: layout.pageInset, paddingBottom: layout.pageBottom },
+  eyebrow: { color: colors.accent, fontSize: type.eyebrow, fontWeight: '900', letterSpacing: 1.8, marginTop: spacing.md },
+  title: { color: colors.text, fontSize: type.title, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
+  body: { color: colors.muted, fontSize: type.body, lineHeight: 21, marginTop: spacing.sm, marginBottom: spacing.md },
+  heroMetric: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: layout.cardInset, borderWidth: 1, borderColor: colors.accentBorder, marginBottom: spacing.sm },
   heroMetricTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   heroMetricValue: { color: colors.text, fontSize: 42, fontWeight: '900', letterSpacing: -2, marginTop: 4, fontVariant: ['tabular-nums'], lineHeight: 48 },
   metricBadge: { backgroundColor: colors.accentSoft, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 7 },
@@ -210,7 +170,7 @@ const styles = StyleSheet.create({
   metricValue: { color: colors.text, fontSize: 28, fontWeight: '900', fontVariant: ['tabular-nums'], lineHeight: 32 },
   metricLabel: { color: colors.accent, fontSize: 12, fontWeight: '800', marginTop: 2 },
   metricDetail: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: 6 },
-  fingerprintCard: { backgroundColor: colors.bgElevated, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.accentBorder, marginBottom: spacing.sm },
+  fingerprintCard: { backgroundColor: colors.bgElevated, borderRadius: radius.xl, padding: layout.cardInset, borderWidth: 1, borderColor: colors.accentBorder, marginBottom: spacing.sm },
   signalEyebrow: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1.5, marginBottom: 5 },
   fingerprintHeaderRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md, marginBottom: 5 },
   fingerprintNameSpacer: { flex: 2.5 },
@@ -221,14 +181,14 @@ const styles = StyleSheet.create({
   fingerprintNode: { flex: 1, height: 24, alignItems: 'center', justifyContent: 'center' },
   fingerprintNodeActive: { opacity: 1 },
   fingerprintCore: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.accent, borderWidth: 2, borderColor: colors.accentSoft },
-  card: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, marginTop: spacing.sm },
+  card: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: layout.cardInset, borderWidth: 1, borderColor: colors.border, marginTop: spacing.sm },
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
   sectionHeaderCopy: { flex: 1, minWidth: 0 },
   sectionCount: { color: colors.accent, backgroundColor: colors.accentSoft, minWidth: 30, textAlign: 'center', paddingHorizontal: 9, paddingVertical: 5, borderRadius: radius.pill, fontWeight: '900', fontVariant: ['tabular-nums'], alignSelf: 'flex-start' },
   supplyRow: { paddingVertical: spacing.md, gap: spacing.sm },
-  supplyIdentity: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.md },
+  supplyIdentity: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md },
   supplyName: { flex: 1, color: colors.text, fontSize: 16, fontWeight: '900' },
-  supplyAmount: { color: colors.muted, fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  supplyAmount: { color: colors.muted, textAlign: 'right', flexShrink: 1, fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] },
   reservoir: { gap: 7 },
   reservoirLabels: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   reservoirLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 1.1, color: colors.subtle },
