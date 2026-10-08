@@ -1,19 +1,35 @@
 import { useState } from 'react';
-import { useRouter } from 'expo-router';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, layout, radius, type } from '@/theme';
+import { usePathname, useRouter } from 'expo-router';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { colors, layout, radius, spacing, type } from '@/theme';
 
-const links = [
-  { label: 'Today', route: '/(tabs)' },
-  { label: 'Protocol Library', route: '/(tabs)/protocol' },
-  { label: 'Timeline', route: '/(tabs)/log' },
-  { label: 'Insights', route: '/(tabs)/insights' },
-  { label: 'Calculators & Tools', route: '/tools' },
-  { label: 'Account & Privacy', route: '/(tabs)/you' }
+const sections = [
+  {
+    title: 'YOUR WORKSPACE',
+    links: [
+      { label: 'Today', caption: 'Daily overview and quick logging', route: '/(tabs)', path: '/' },
+      { label: 'Protocol Library', caption: 'Substances and schedules', route: '/(tabs)/protocol', path: '/protocol' },
+      { label: 'Timeline', caption: 'Recorded history and cycles', route: '/(tabs)/log', path: '/log' },
+      { label: 'Insights', caption: 'Activity and supply signals', route: '/(tabs)/insights', path: '/insights' }
+    ]
+  },
+  {
+    title: 'LABORATORY',
+    links: [
+      { label: 'Calculators & Tools', caption: 'Unit-aware arithmetic', route: '/tools', path: '/tools' }
+    ]
+  },
+  {
+    title: 'ACCOUNT',
+    links: [
+      { label: 'Account & Privacy', caption: 'Profile, security and your data', route: '/(tabs)/you', path: '/you' }
+    ]
+  }
 ] as const;
 
 export function PulseMenu() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
   const router = useRouter();
 
   return (
@@ -23,26 +39,61 @@ export function PulseMenu() {
           <Text style={styles.brand}>SCIENCE BY HUGS</Text>
           <Text style={styles.pulse}>PULSE <Text style={styles.version}>02 / LAB</Text></Text>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Open Pulse menu" onPress={() => setOpen(true)} style={styles.trigger}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Open Pulse navigation" accessibilityHint="Shows app sections and tools" onPress={() => setOpen(true)} style={styles.trigger}>
           <View style={styles.bar} /><View style={styles.bar} /><View style={styles.bar} />
         </Pressable>
       </View>
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
         <View style={styles.scrim}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Close menu" style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
+          <Pressable accessibilityRole="button" accessibilityLabel="Dismiss navigation" style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
           <View style={styles.panel}>
             <View style={styles.panelTop}>
-              <View><Text style={styles.brand}>SCIENCE BY HUGS</Text><Text style={styles.panelTitle}>PULSE NAVIGATION</Text></View>
-              <Pressable accessibilityRole="button" accessibilityLabel="Close menu" onPress={() => setOpen(false)} style={styles.close}><Text style={styles.closeText}>✕</Text></Pressable>
+              <View style={styles.panelHeading}>
+                <Text style={styles.brand}>SCIENCE BY HUGS</Text>
+                <Text style={styles.panelTitle}>Explore Pulse.</Text>
+                <Text style={styles.panelSubtitle}>YOUR WORKSPACE, ORGANIZED.</Text>
+              </View>
+              <Pressable accessibilityRole="button" accessibilityLabel="Close navigation" onPress={() => setOpen(false)} style={styles.close}><Text style={styles.closeText}>✕</Text></Pressable>
             </View>
-            {links.map((entry, index) => (
-              <Pressable key={entry.route} accessibilityRole="button" onPress={() => { setOpen(false); router.push(entry.route); }} style={[styles.item, index > 0 && styles.divider]}>
-                <Text style={styles.itemIndex}>{String(index + 1).padStart(2, '0')}</Text>
-                <Text style={styles.itemText}>{entry.label}</Text>
-                <Text style={styles.arrow}>›</Text>
-              </Pressable>
-            ))}
-            <Text style={styles.footer}>BUILT FOR YOUR ROUTINE · SCIENCE BY HUGS</Text>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+              {sections.map((section, sectionIndex) => (
+                <View key={section.title} style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionIndex}>{String(sectionIndex + 1).padStart(2, '0')}</Text>
+                    <Text style={styles.sectionTitle}>{section.title}</Text>
+                    <View style={styles.sectionRule} />
+                  </View>
+                  {section.links.map((entry) => {
+                    const active = pathname === entry.path || (entry.path === '/' && (pathname === '/index' || pathname === '/(tabs)'));
+                    return (
+                      <Pressable
+                        key={entry.route}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: active }}
+                        accessibilityLabel={entry.label}
+                        accessibilityHint={entry.caption}
+                        onPress={() => {
+                          setOpen(false);
+                          if (!active) router.push(entry.route);
+                        }}
+                        style={[styles.item, active && styles.itemActive]}
+                      >
+                        <View style={[styles.itemMarker, active && styles.itemMarkerActive]} />
+                        <View style={styles.itemBody}>
+                          <Text style={[styles.itemText, active && styles.itemTextActive]}>{entry.label}</Text>
+                          <Text style={styles.itemCaption}>{entry.caption}</Text>
+                        </View>
+                        <Text style={[styles.arrow, active && styles.arrowActive]}>{active ? '●' : '↗'}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ))}
+              <View style={styles.footerBlock}>
+                <Text style={styles.footer}>YOUR PROTOCOLS. YOUR RHYTHM. YOUR RECORD.</Text>
+                <Text style={styles.footerSub}>SCIENCE BY HUGS · PULSE 02</Text>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -57,16 +108,31 @@ const styles = StyleSheet.create({
   version: { color: colors.muted, fontSize: 9, letterSpacing: 1 },
   trigger: { minHeight: layout.minTapHeight, width: 46, borderWidth: 1, borderColor: colors.accentBorder, backgroundColor: colors.bgElevated, borderRadius: radius.md, justifyContent: 'center', alignItems: 'center', gap: 5 },
   bar: { width: 18, height: 2, backgroundColor: colors.accent, borderRadius: 2 },
-  scrim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.76)', justifyContent: 'flex-start', paddingTop: 55 },
-  panel: { margin: 14, borderRadius: radius.xl, padding: layout.cardInset, borderWidth: 1, borderColor: colors.accentBorder, backgroundColor: colors.panel },
-  panelTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, marginBottom: 12 },
-  panelTitle: { color: colors.text, fontSize: 20, fontWeight: '900', letterSpacing: 1.3, marginTop: 8 },
+  scrim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-start', paddingTop: 38 },
+  panel: { marginHorizontal: 12, marginBottom: 20, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.accentBorder, backgroundColor: colors.panel, maxHeight: '91%', overflow: 'hidden' },
+  panelTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', padding: layout.cardInset, borderBottomWidth: 1, borderBottomColor: colors.border },
+  panelHeading: { flex: 1, minWidth: 0 },
+  panelTitle: { color: colors.text, fontSize: 27, fontWeight: '900', letterSpacing: -0.9, marginTop: 7 },
+  panelSubtitle: { color: colors.muted, fontSize: 9, fontWeight: '900', letterSpacing: 1.2, marginTop: 4 },
   close: { minHeight: 44, width: 44, justifyContent: 'center', alignItems: 'center' },
-  closeText: { color: colors.text, fontSize: 24 },
-  item: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 14 },
-  divider: { borderTopWidth: 1, borderTopColor: colors.border },
-  itemIndex: { color: colors.subtle, fontSize: 11, fontWeight: '900', fontVariant: ['tabular-nums'] },
-  itemText: { flex: 1, color: colors.text, fontSize: 16, fontWeight: '800' },
-  arrow: { color: colors.accent, fontSize: 26 },
-  footer: { color: colors.subtle, fontSize: 9, letterSpacing: 1.1, marginTop: 20, textAlign: 'center' }
+  closeText: { color: colors.text, fontSize: 23 },
+  scrollContent: { padding: layout.cardInset, paddingBottom: 26, gap: spacing.lg },
+  section: { gap: 7 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 3 },
+  sectionIndex: { color: colors.accent, fontSize: 10, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  sectionTitle: { color: colors.muted, fontSize: 9, fontWeight: '900', letterSpacing: 1.3 },
+  sectionRule: { flex: 1, height: 1, backgroundColor: colors.border },
+  item: { flexDirection: 'row', alignItems: 'center', minHeight: 59, paddingHorizontal: 11, paddingVertical: 9, borderRadius: radius.md, gap: 10, borderWidth: 1, borderColor: 'transparent' },
+  itemActive: { borderColor: colors.accentBorder, backgroundColor: colors.accentSoft },
+  itemMarker: { width: 3, height: 26, backgroundColor: colors.border, borderRadius: 2 },
+  itemMarkerActive: { backgroundColor: colors.accent },
+  itemBody: { flex: 1, minWidth: 0, gap: 3 },
+  itemText: { color: colors.text, fontSize: 15, fontWeight: '800' },
+  itemTextActive: { color: colors.accent },
+  itemCaption: { color: colors.muted, fontSize: 11, lineHeight: 16 },
+  arrow: { color: colors.subtle, fontSize: 18, fontWeight: '700' },
+  arrowActive: { color: colors.accent, fontSize: 10 },
+  footerBlock: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 15, gap: 6 },
+  footer: { color: colors.accent, fontSize: 10, letterSpacing: 0.8, fontWeight: '900' },
+  footerSub: { color: colors.subtle, fontSize: 9, letterSpacing: 1.1 }
 });
