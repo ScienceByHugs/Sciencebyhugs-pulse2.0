@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { localDateKey } from '@/domain/schedule';
 import { enqueueQuickLog, readOutbox, removeQuickLog, type QuickLogPayload } from '@/lib/outbox';
 
 export type InventorySummary = {
@@ -62,6 +63,30 @@ export async function updateProtocolStatus(protocolId: string, status: 'active' 
   if (error) throw error;
 }
 
+function validCalendarDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year = 0, month = 0, day = 0] = value.split('-').map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
+}
+
+export async function updateProtocolDetails(protocolId: string, name: string, startsOn: string | null, endsOn: string | null) {
+  const userId = await currentUserId();
+  const cleanName = name.trim();
+  if (!cleanName || cleanName.length > 100) throw new Error('Use a protocol name of 1–100 characters.');
+  if (startsOn && !validCalendarDate(startsOn)) throw new Error('Start date must be a real date in YYYY-MM-DD format.');
+  if (endsOn && !validCalendarDate(endsOn)) throw new Error('End date must be a real date in YYYY-MM-DD format.');
+  if (startsOn && endsOn && endsOn < startsOn) throw new Error('End date cannot be before the start date.');
+  const { data, error } = await supabase.from('protocols')
+    .update({ name: cleanName, starts_on: startsOn, ends_on: endsOn, updated_at: new Date().toISOString() })
+    .eq('id', protocolId)
+    .eq('user_id', userId)
+    .select('id')
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error('Protocol not found or you do not have permission to update it.');
+}
+
 export async function setProtocolItemActive(itemId: string, active: boolean) {
   const userId = await currentUserId();
   const { error } = await supabase.from('protocol_items')
@@ -110,13 +135,19 @@ export async function listProtocolItems(protocolId?: string) {
 export async function listTodayItems() {
   const { data, error } = await supabase
     .from('protocol_items')
-    .select('id,protocol_id,created_at,name,category,route,dose_amount,dose_unit,schedule,site_rotation_enabled,inventory_containers(id,remaining_amount,total_amount,unit,low_threshold,is_active),protocols!inner(status)')
+    .select('id,protocol_id,created_at,name,category,route,dose_amount,dose_unit,schedule,site_rotation_enabled,inventory_containers(id,remaining_amount,total_amount,unit,low_threshold,is_active),protocols!inner(status,starts_on,ends_on)')
     .eq('active', true)
     .eq('protocols.status', 'active')
     .order('created_at', { ascending: true });
 
   if (error) throw error;
-  return data as unknown as TodayItem[];
+  const today = localDateKey();
+  const current = (data ?? []).filter((row) => {
+    const protocol = row.protocols as unknown as { starts_on: string | null; ends_on: string | null };
+    return (!protocol.starts_on || today >= protocol.starts_on) &&
+      (!protocol.ends_on || today <= protocol.ends_on);
+  });
+  return current as unknown as TodayItem[];
 }
 
 type CreateItemInput = {
