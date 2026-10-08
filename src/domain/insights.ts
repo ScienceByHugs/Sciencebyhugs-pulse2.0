@@ -69,6 +69,7 @@ export function calculateSupplyForecast(items: TodayItem[]) {
       name: item.name,
       unit: inventory.unit,
       remaining: inventory.remaining_amount,
+      total: inventory.total_amount,
       dosesRemaining,
       projectedLowInDays
     }];
