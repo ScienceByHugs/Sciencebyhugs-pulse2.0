@@ -22,7 +22,7 @@ const tabIcons = {
     android: require('../../assets/icons/insights.xml')
   }),
   you: Icon.select({
-    ios: 'person.crop.circle.fill',
+    ios: 'person.fill',
     android: require('../../assets/icons/you.xml')
   })
 } as const;
@@ -31,13 +31,12 @@ function TabIcon({ routeName, color, focused }: { routeName: string; color: Colo
   const name = tabIcons[routeName as keyof typeof tabIcons] ?? tabIcons.index;
   return (
     <View style={styles.iconShell}>
-      {focused ? <View style={styles.signalHalo} /> : null}
+      {focused ? <View style={styles.activeSignalLine} /> : null}
       <View style={[styles.iconCore, focused && styles.iconCoreActive]}>
         <Host matchContents>
-          <Icon name={name} size={18} color={color} />
+          <Icon name={name} size={21} color={color} />
         </Host>
       </View>
-      <View style={[styles.signalNode, focused && styles.signalNodeActive]} />
     </View>
   );
 }
@@ -89,12 +88,10 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  iconShell: { width: 42, height: 34, alignItems: 'center', justifyContent: 'center' },
-  signalHalo: { position: 'absolute', top: 1, width: 34, height: 26, borderRadius: 13, backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentBorder },
-  iconCore: { width: 26, height: 24, alignItems: 'center', justifyContent: 'center', opacity: .78 },
+  iconShell: { width: 44, height: 38, alignItems: 'center', justifyContent: 'center', paddingTop: 5 },
+  activeSignalLine: { position: 'absolute', top: 0, width: 22, height: 2, backgroundColor: colors.accent },
+  iconCore: { width: 28, height: 27, alignItems: 'center', justifyContent: 'center', opacity: .68 },
   iconCoreActive: { opacity: 1 },
-  signalNode: { position: 'absolute', bottom: 0, width: 3, height: 3, borderRadius: 2, backgroundColor: colors.border },
-  signalNodeActive: { width: 13, backgroundColor: colors.accent },
-  tabLabel: { fontSize: 8, fontWeight: '800', letterSpacing: .75, marginTop: 1 },
+  tabLabel: { fontSize: 9, fontWeight: '800', letterSpacing: .75, marginTop: 1 },
   tabLabelActive: { fontWeight: '900' }
 });
