@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, type } from '@/theme';
 import { localDateKey } from '@/domain/schedule';
 import { listDoseLogs, type TimelineEntry } from '@/services/pulse';
@@ -11,6 +11,7 @@ function dayKey(value: string) {
 
 export default function LogScreen() {
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
+  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month' | 'year' | 'all'>('week');
 
   const load = useCallback(async () => {
     try {
@@ -45,14 +46,25 @@ export default function LogScreen() {
 
   const maxActivity = useMemo(() => Math.max(1, ...activity.map((day) => day.count)), [activity]);
 
+  const filteredEntries = useMemo(() => {
+    const now = new Date();
+    if (viewMode === 'all') return entries;
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    if (viewMode === 'week') start.setDate(start.getDate() - 6);
+    if (viewMode === 'month') start.setDate(1);
+    if (viewMode === 'year') start.setMonth(0, 1);
+    return entries.filter((entry) => new Date(entry.logged_at) >= start);
+  }, [entries, viewMode]);
+
   const groups = useMemo(() => {
     const map = new Map<string, TimelineEntry[]>();
-    for (const entry of entries) {
+    for (const entry of filteredEntries) {
       const key = dayKey(entry.logged_at);
       map.set(key, [...(map.get(key) ?? []), entry]);
     }
     return [...map.entries()];
-  }, [entries]);
+  }, [filteredEntries]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -61,13 +73,14 @@ export default function LogScreen() {
         <Text style={styles.title}>Timeline</Text>
         <Text style={styles.body}>A clear record of what you logged, when you logged it, and where.</Text>
 
+        <View style={styles.modeStrip}>{(['day', 'week', 'month', 'year', 'all'] as const).map((mode) => <Pressable accessibilityRole="button" accessibilityState={{ selected: viewMode === mode }} key={mode} style={[styles.modeButton, viewMode === mode && styles.modeButtonActive]} onPress={() => setViewMode(mode)}><Text style={[styles.modeText, viewMode === mode && styles.modeTextActive]}>{mode.toUpperCase()}</Text></Pressable>)}</View>
         <View style={styles.signalCard}>
           <View style={styles.signalHeader}>
             <View>
               <Text style={styles.signalEyebrow}>ACTIVITY SIGNAL</Text>
-              <Text style={styles.signalTitle}>Last 7 days</Text>
+              <Text style={styles.signalTitle}>Last 7 days · overview</Text>
             </View>
-            <Text style={styles.signalTotal}>{entries.length}</Text>
+            <Text style={styles.signalTotal}>{filteredEntries.length}</Text>
           </View>
           <View style={styles.signalStrip}>
             {activity.map((day) => (
@@ -82,7 +95,7 @@ export default function LogScreen() {
           </View>
         </View>
 
-        {entries.length === 0 ? (
+        {filteredEntries.length === 0 ? (
           <View style={styles.emptyCard}>
             <View style={styles.emptyDot} />
             <Text style={styles.cardTitle}>Your timeline starts here.</Text>
@@ -123,6 +136,11 @@ export default function LogScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   page: { padding: spacing.lg, paddingBottom: 148 },
+  modeStrip: { flexDirection: 'row', gap: 5, marginBottom: 14 },
+  modeButton: { flex: 1, minWidth: 0, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: 11, alignItems: 'center', backgroundColor: colors.bgElevated },
+  modeButtonActive: { borderColor: colors.accentBorder, backgroundColor: colors.accentSoft },
+  modeText: { fontSize: 9, fontWeight: '900', color: colors.muted },
+  modeTextActive: { color: colors.accent },
   eyebrow: { color: colors.accent, fontSize: 11, fontWeight: '900', letterSpacing: 1.8, marginTop: spacing.md },
   title: { color: colors.text, fontSize: 31, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
   body: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.xl, maxWidth: 340 },
