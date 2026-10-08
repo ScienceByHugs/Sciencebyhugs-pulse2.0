@@ -9,9 +9,7 @@
     "android": "expo start --android",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "doctor": "npx expo-doctor",
-    "fix:icon": "node scripts/normalize-icon.cjs",
-    "eas-build-pre-install": "node scripts/normalize-icon.cjs"
+    "doctor": "npx expo-doctor"
   },
   "dependencies": {
     "@expo/ui": "~58.0.14",
