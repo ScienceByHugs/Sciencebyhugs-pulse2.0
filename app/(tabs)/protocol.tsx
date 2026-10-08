@@ -381,7 +381,7 @@ export default function ProtocolScreen() {
               </View>
             ) : null}
 
-            {activeProtocol ? <Text style={styles.smallLabel}>ITEMS</Text> : null}
+            {activeProtocol ? <Text style={styles.smallLabel}>YOUR SUBSTANCES · {activeItems.filter((item) => item.active !== false).length} ACTIVE</Text> : null}
             {activeProtocol ? items.filter((item) => item.protocol_id === activeProtocol.id).map((item) => {
               const inventoryItem = item.inventory_containers?.find((container) => container.is_active);
               return (
@@ -391,8 +391,24 @@ export default function ProtocolScreen() {
                     <Text style={styles.cardDetail}>{item.category || 'Substance'} · {item.dose_amount} {item.dose_unit} · {item.route}</Text>
                     <Text style={styles.scheduleText}>{formatSchedule(item.schedule)}</Text>
                   </View>
-                  <Text style={styles.stock}>{inventoryItem ? `${inventoryItem.remaining_amount} ${inventoryItem.unit}` : 'No stock'}</Text>
+                  <View style={styles.stockBlock}>
+                    <Text style={styles.stock}>{inventoryItem ? `${inventoryItem.remaining_amount} ${inventoryItem.unit}` : 'No stock'}</Text>
+                    <Text style={styles.itemStatus}>{item.active === false ? 'PAUSED' : 'TRACKING'}</Text>
+                    <Pressable accessibilityRole="button" disabled={busy} onPress={() => startEdit(item)} style={styles.smallItemAction}><Text style={styles.smallItemActionText}>EDIT</Text></Pressable>
+                    <Pressable accessibilityRole="button" disabled={busy} onPress={() => void toggleItem(item)} style={styles.smallItemAction}><Text style={styles.smallItemActionText}>{item.active === false ? 'RESUME' : 'PAUSE'}</Text></Pressable>
+                  </View>
                 </View>
+                {editingItemId === item.id ? (
+                  <View style={styles.editCard} key={`edit-${item.id}`}>
+                    <Text style={styles.smallLabel}>EDIT SUBSTANCE · {item.name}</Text>
+                    <TextInput accessibilityLabel="Substance name" style={styles.input} maxLength={100} value={editItemName} onChangeText={setEditItemName} />
+                    <View style={styles.chips}>{CATEGORIES.map((cat) => <Pressable key={cat} onPress={() => setEditCategory(cat)} style={[styles.chip, editCategory === cat && styles.chipActive]}><Text style={[styles.chipText, editCategory === cat && styles.chipTextActive]}>{cat}</Text></Pressable>)}</View>
+                    <View style={styles.builderNav}>
+                      <Pressable style={styles.backButton} disabled={busy} onPress={() => setEditingItemId(null)}><Text style={styles.backText}>CANCEL</Text></Pressable>
+                      <Pressable style={[styles.primary, styles.flex]} disabled={busy} onPress={() => void saveItemEdit()}><Text style={styles.primaryText}>SAVE DETAILS</Text></Pressable>
+                    </View>
+                  </View>
+                ) : null}
               );
             }) : null}
           </>
@@ -431,6 +447,11 @@ const styles = StyleSheet.create({
   dayActive: { borderColor: colors.accentBorder, backgroundColor: colors.accentSoft },
   dayText: { color: colors.muted, fontWeight: '800' },
   protocolPicker: { backgroundColor: colors.panel, padding: layout.cardInset, borderRadius: radius.xl, borderColor: colors.accentBorder, borderWidth: 1, marginBottom: spacing.md, gap: 12 },
+  stockBlock: { alignItems: 'flex-end', maxWidth: 100, gap: 7 },
+  itemStatus: { color: colors.muted, fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+  smallItemAction: { borderColor: colors.accentBorder, backgroundColor: colors.accentSoft, borderWidth: 1, borderRadius: radius.sm, minWidth: 77, minHeight: 34, alignItems: 'center', justifyContent: 'center' },
+  smallItemActionText: { color: colors.accent, fontSize: 10, fontWeight: '900' },
+  editCard: { backgroundColor: colors.panel2, borderRadius: radius.lg, padding: spacing.md, borderColor: colors.accentBorder, borderWidth: 1, marginTop: 6, gap: 12 },
   itemCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.md, borderWidth: 1, borderColor: colors.border, marginTop: 8 },
   itemTitle: { color: colors.text, fontSize: 16, fontWeight: '800' },
   stock: { color: colors.accent, fontWeight: '800', fontSize: 12, maxWidth: 92, textAlign: 'right', flexShrink: 1 },
