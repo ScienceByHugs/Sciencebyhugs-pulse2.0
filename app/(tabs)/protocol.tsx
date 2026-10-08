@@ -3,7 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, layout, radius, spacing, type } from '@/theme';
 import { PulseMenu } from '@/components/PulseMenu';
-import { createProtocol, createProtocolItem, listProtocolItems, listProtocols, updateProtocolStatus, type TodayItem } from '@/services/pulse';
+import { createProtocol, createProtocolItem, listProtocolItems, listProtocols, setProtocolItemActive, updateProtocolItemDetails, updateProtocolStatus, type TodayItem } from '@/services/pulse';
 import { formatSchedule, isDueOnDate, localDateKey, scheduleTime } from '@/domain/schedule';
 
 type Protocol = { id: string; name: string; status: string };
@@ -16,6 +16,10 @@ export default function ProtocolScreen() {
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [items, setItems] = useState<TodayItem[]>([]);
   const [protocolName, setProtocolName] = useState('');
+  const [selectedProtocolId, setSelectedProtocolId] = useState<string | null>(null);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editItemName, setEditItemName] = useState('');
+  const [editCategory, setEditCategory] = useState('Other');
   const [itemName, setItemName] = useState('');
   const [category, setCategory] = useState<string>('Peptide');
   const [showNewProtocol, setShowNewProtocol] = useState(false);
@@ -34,7 +38,7 @@ export default function ProtocolScreen() {
   const [showMapDetails, setShowMapDetails] = useState(false);
   const [builderStep, setBuilderStep] = useState<1 | 2 | 3>(1);
 
-  const activeProtocol = useMemo(() => protocols.find((p) => p.status === 'active'), [protocols]);
+  const activeProtocol = useMemo(() => protocols.find((p) => p.status === 'active' && p.id === selectedProtocolId) ?? protocols.find((p) => p.status === 'active'), [protocols, selectedProtocolId]);
   const activeItems = useMemo(() => activeProtocol ? items.filter((item) => item.protocol_id === activeProtocol.id) : [], [activeProtocol, items]);
   const protocolMap = useMemo(() => {
     const formatter = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
@@ -42,7 +46,7 @@ export default function ProtocolScreen() {
       const date = new Date();
       date.setHours(12, 0, 0, 0);
       date.setDate(date.getDate() + offset);
-      const due = activeItems.filter((item) => isDueOnDate(item.schedule, date));
+      const due = activeItems.filter((item) => item.active !== false && isDueOnDate(item.schedule, date));
       return {
         key: localDateKey(date),
         label: formatter.format(date).slice(0, 3).toUpperCase(),
@@ -58,6 +62,7 @@ export default function ProtocolScreen() {
     try {
       const [nextProtocols, nextItems] = await Promise.all([listProtocols(), listProtocolItems()]);
       setProtocols(nextProtocols as Protocol[]);
+      setSelectedProtocolId((id) => id && nextProtocols.some((p) => p.id === id && p.status === 'active') ? id : (nextProtocols.find((p) => p.status === 'active')?.id ?? null));
       setItems(nextItems);
     } catch (error) {
       Alert.alert('Could not load protocol', error instanceof Error ? error.message : 'Unknown error');
@@ -84,14 +89,43 @@ export default function ProtocolScreen() {
   async function setProtocolStatus(protocolId: string, status: 'active' | 'paused' | 'archived') {
     try {
       setBusy(true);
-      if (status === 'active') {
-        const current = protocols.find((protocol) => protocol.status === 'active' && protocol.id !== protocolId);
-        if (current) await updateProtocolStatus(current.id, 'paused');
-      }
       await updateProtocolStatus(protocolId, status);
+      if (status === 'active') setSelectedProtocolId(protocolId);
       await load();
     } catch (error) {
       Alert.alert('Could not update protocol', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleItem(item: TodayItem) {
+    try {
+      setBusy(true);
+      await setProtocolItemActive(item.id, item.active === false);
+      await load();
+    } catch (error) {
+      Alert.alert('Could not update substance', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function startEdit(item: TodayItem) {
+    setEditingItemId(item.id);
+    setEditItemName(item.name);
+    setEditCategory(item.category || 'Other');
+  }
+
+  async function saveItemEdit() {
+    if (!editingItemId) return;
+    try {
+      setBusy(true);
+      await updateProtocolItemDetails(editingItemId, editItemName, editCategory);
+      setEditingItemId(null);
+      await load();
+    } catch (error) {
+      Alert.alert('Could not save substance', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setBusy(false);
     }
@@ -150,8 +184,8 @@ export default function ProtocolScreen() {
       <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <PulseMenu />
         <Text style={styles.eyebrow}>YOUR ROUTINE</Text>
-        <Text style={styles.title}>Protocol</Text>
-        <Text style={styles.body}>Build the routine once. Pulse handles the day-to-day tracking.</Text>
+        <Text style={styles.title}>Protocol Library</Text>
+        <Text style={styles.body}>Your substances and routines, organized your way. Track more than one protocol.</Text>
 
         <View style={styles.launchRow}>
           <Pressable style={styles.launchButton} onPress={() => setShowNewProtocol((value) => !value)}><Text style={styles.launchText}>＋ NEW PROTOCOL</Text></Pressable>
@@ -167,6 +201,7 @@ export default function ProtocolScreen() {
           </View>
         ) : (
           <>
+            {protocols.some((p) => p.status === 'active') ? <View style={styles.protocolPicker}><Text style={styles.smallLabel}>ACTIVE PROTOCOLS · SELECT TO MANAGE</Text><View style={styles.chips}>{protocols.filter((p) => p.status === 'active').map((p) => <Pressable accessibilityRole="button" accessibilityState={{ selected: activeProtocol?.id === p.id }} key={p.id} style={[styles.chip, activeProtocol?.id === p.id && styles.chipActive]} onPress={() => { setSelectedProtocolId(p.id); setShowBuilder(false); setEditingItemId(null); }}><Text style={[styles.chipText, activeProtocol?.id === p.id && styles.chipTextActive]}>{p.name}</Text></Pressable>)}</View></View> : null}
             {activeProtocol ? (
               <View style={styles.card}>
                 <Text style={styles.smallLabel}>ACTIVE PROTOCOL</Text>
@@ -194,7 +229,7 @@ export default function ProtocolScreen() {
                   <Text style={styles.itemTitle}>{protocol.name}</Text>
                   <Text style={styles.cardDetail}>{protocol.status}</Text>
                 </View>
-                {protocol.status === 'paused' ? (
+                {protocol.status === 'paused' || protocol.status === 'archived' ? (
                   <Pressable style={styles.activateButton} disabled={busy} onPress={() => void setProtocolStatus(protocol.id, 'active')}>
                     <Text style={styles.activateText}>ACTIVATE</Text>
                   </Pressable>
@@ -395,6 +430,7 @@ const styles = StyleSheet.create({
   day: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, backgroundColor: colors.panel2 },
   dayActive: { borderColor: colors.accentBorder, backgroundColor: colors.accentSoft },
   dayText: { color: colors.muted, fontWeight: '800' },
+  protocolPicker: { backgroundColor: colors.panel, padding: layout.cardInset, borderRadius: radius.xl, borderColor: colors.accentBorder, borderWidth: 1, marginBottom: spacing.md, gap: 12 },
   itemCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.md, borderWidth: 1, borderColor: colors.border, marginTop: 8 },
   itemTitle: { color: colors.text, fontSize: 16, fontWeight: '800' },
   stock: { color: colors.accent, fontWeight: '800', fontSize: 12, maxWidth: 92, textAlign: 'right', flexShrink: 1 },
