@@ -7,6 +7,7 @@ import { isDueOnDate, localDayRange, nextScheduledTimeToday, scheduleTime } from
 import { sitesForRoute, suggestSite } from '@/domain/sites';
 import { rescheduleReminders } from '@/lib/reminders';
 import { updatePulseTodayWidget } from '@/lib/widgets';
+import { useAuth } from '@/providers/AuthProvider';
 
 function timeLabel(value?: string) {
   if (!value) return 'Any time';
@@ -17,6 +18,8 @@ function timeLabel(value?: string) {
 }
 
 export default function TodayScreen() {
+  const { session } = useAuth();
+  const firstName = String(session?.user.user_metadata?.first_name ?? session?.user.user_metadata?.full_name ?? '').trim().split(/\s+/)[0] || '';
   const [allItems, setAllItems] = useState<TodayItem[]>([]);
   const [todayLogs, setTodayLogs] = useState<TimelineEntry[]>([]);
   const [recentSites, setRecentSites] = useState<Record<string, string[]>>({});
@@ -155,7 +158,8 @@ export default function TodayScreen() {
             opacity: completionPulse.interpolate({ inputRange: [0, 1], outputRange: [0, .24] }),
             transform: [{ scale: completionPulse.interpolate({ inputRange: [0, 1], outputRange: [.72, 1.18] }) }]
           }]} />
-          <Text style={styles.greeting}>Your day,<Text style={styles.accentWord}> simplified.</Text></Text>
+          <Text style={styles.greeting}>{firstName ? `Welcome back, ${firstName}.` : 'Welcome to Pulse.'}</Text>
+          <Text style={styles.welcomeSignature}>SCIENCE BY HUGS · YOUR PROTOCOLS, IN MOTION</Text>
           <Text style={styles.date}>{dateLabel}</Text>
           <View style={styles.summaryRow}>
             <View style={styles.summaryCell}><Text style={styles.summaryNumber}>{items.length}</Text><Text style={styles.summaryLabel}>DUE TODAY</Text></View>
@@ -306,6 +310,7 @@ const styles = StyleSheet.create({
   briefValue: { color: colors.text, fontSize: 13, lineHeight: 18, fontWeight: '900', fontVariant: ['tabular-nums'] },
   briefWarning: { color: colors.warning },
   briefLabel: { color: colors.subtle, fontSize: 7, fontWeight: '900', letterSpacing: .9, marginTop: 2 },
+  welcomeSignature: { color: colors.accent, fontSize: 9, letterSpacing: 1.5, fontWeight: '900', marginTop: 8 },
   greeting: { color: colors.text, fontSize: 31, fontWeight: '700', letterSpacing: -1.6, lineHeight: 36, maxWidth: 360 },
   accentWord: { color: colors.accent },
   date: { color: colors.muted, fontSize: 14, marginTop: spacing.sm, marginBottom: spacing.sm },
