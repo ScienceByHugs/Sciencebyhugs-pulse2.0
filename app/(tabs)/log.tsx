@@ -4,7 +4,9 @@ import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } fr
 import { colors, layout, radius, spacing, type } from '@/theme';
 import { PulseMenu } from '@/components/PulseMenu';
 import { localDateKey } from '@/domain/schedule';
-import { listDoseLogs, type TimelineEntry } from '@/services/pulse';
+import { listDoseLogs, listProtocols, listProtocolItems, type TimelineEntry, type TodayItem } from '@/services/pulse';
+
+type TrackedProtocol = { id: string; name: string; status: string; starts_on: string | null; ends_on: string | null };
 
 function dayKey(value: string) {
   return new Date(value).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
@@ -12,17 +14,47 @@ function dayKey(value: string) {
 
 export default function LogScreen() {
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
-  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month' | 'year' | 'all'>('week');
+  const [protocols, setProtocols] = useState<TrackedProtocol[]>([]);
+  const [protocolItems, setProtocolItems] = useState<TodayItem[]>([]);
+  const [selectedProtocol, setSelectedProtocol] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month' | 'year' | 'cycle' | 'all'>('week');
 
   const load = useCallback(async () => {
     try {
-      setEntries(await listDoseLogs());
+      const [logs, nextProtocols, nextItems] = await Promise.all([listDoseLogs(1000), listProtocols(), listProtocolItems()]);
+      setEntries(logs);
+      setProtocols(nextProtocols);
+      setProtocolItems(nextItems);
+      setSelectedProtocol((previous) => previous && nextProtocols.some((p) => p.id === previous) ? previous : (nextProtocols[0]?.id ?? null));
     } catch (error) {
       Alert.alert('Could not load timeline', error instanceof Error ? error.message : 'Unknown error');
     }
   }, []);
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
+
+  const cycleEntries = useMemo(() => {
+    if (!selectedProtocol) return [];
+    const itemIds = new Set(protocolItems.filter((item) => item.protocol_id === selectedProtocol).map((item) => item.id));
+    const protocol = protocols.find((entry) => entry.id === selectedProtocol);
+    return entries.filter((entry) => {
+      if (!entry.protocol_item_id || !itemIds.has(entry.protocol_item_id)) return false;
+      const date = localDateKey(new Date(entry.logged_at));
+      return (!protocol?.starts_on || date >= protocol.starts_on) && (!protocol?.ends_on || date <= protocol.ends_on);
+    });
+  }, [entries, protocolItems, protocols, selectedProtocol]);
+
+  const filteredEntries = useMemo(() => {
+    const now = new Date();
+    if (viewMode === 'all') return entries;
+    if (viewMode === 'cycle') return cycleEntries;
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    if (viewMode === 'week') start.setDate(start.getDate() - 6);
+    if (viewMode === 'month') start.setDate(1);
+    if (viewMode === 'year') start.setMonth(0, 1);
+    return entries.filter((entry) => new Date(entry.logged_at) >= start);
+  }, [entries, cycleEntries, viewMode]);
 
   const activity = useMemo(() => {
     const now = new Date();
@@ -32,7 +64,7 @@ export default function LogScreen() {
       date.setDate(now.getDate() - (6 - index));
       const next = new Date(date);
       next.setDate(date.getDate() + 1);
-      const count = entries.filter((entry) => {
+      const count = (viewMode === 'cycle' ? cycleEntries : entries).filter((entry) => {
         const logged = new Date(entry.logged_at);
         return logged >= date && logged < next;
       }).length;
@@ -43,20 +75,9 @@ export default function LogScreen() {
         today: index === 6
       };
     });
-  }, [entries]);
+  }, [entries, cycleEntries, viewMode]);
 
   const maxActivity = useMemo(() => Math.max(1, ...activity.map((day) => day.count)), [activity]);
-
-  const filteredEntries = useMemo(() => {
-    const now = new Date();
-    if (viewMode === 'all') return entries;
-    const start = new Date(now);
-    start.setHours(0, 0, 0, 0);
-    if (viewMode === 'week') start.setDate(start.getDate() - 6);
-    if (viewMode === 'month') start.setDate(1);
-    if (viewMode === 'year') start.setMonth(0, 1);
-    return entries.filter((entry) => new Date(entry.logged_at) >= start);
-  }, [entries, viewMode]);
 
   const groups = useMemo(() => {
     const map = new Map<string, TimelineEntry[]>();
@@ -75,14 +96,21 @@ export default function LogScreen() {
         <Text style={styles.title}>Timeline</Text>
         <Text style={styles.body}>A clear record of what you logged, when you logged it, and where.</Text>
 
-        <View style={styles.modeStrip}>{(['day', 'week', 'month', 'year', 'all'] as const).map((mode) => <Pressable accessibilityRole="button" accessibilityState={{ selected: viewMode === mode }} key={mode} style={[styles.modeButton, viewMode === mode && styles.modeButtonActive]} onPress={() => setViewMode(mode)}><Text style={[styles.modeText, viewMode === mode && styles.modeTextActive]}>{mode.toUpperCase()}</Text></Pressable>)}</View>
+        <View style={styles.modeStrip}>{(['day', 'week', 'month', 'year', 'cycle', 'all'] as const).map((mode) => <Pressable accessibilityRole="button" accessibilityState={{ selected: viewMode === mode }} key={mode} style={[styles.modeButton, viewMode === mode && styles.modeButtonActive]} onPress={() => setViewMode(mode)}><Text style={[styles.modeText, viewMode === mode && styles.modeTextActive]}>{mode.toUpperCase()}</Text></Pressable>)}</View>
+        {viewMode === 'cycle' ? (
+          <View style={styles.cycleSelector}>
+            <Text style={styles.signalEyebrow}>SELECT PROTOCOL / CYCLE</Text>
+            {protocols.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cycleOptions}>{protocols.map((protocol) => <Pressable key={protocol.id} onPress={() => setSelectedProtocol(protocol.id)} style={[styles.cyclePill, selectedProtocol === protocol.id && styles.cyclePillActive]} accessibilityRole="button" accessibilityState={{ selected: selectedProtocol === protocol.id }}><Text style={[styles.cyclePillText, selectedProtocol === protocol.id && styles.cyclePillTextActive]}>{protocol.name}</Text></Pressable>)}</ScrollView> : <Text style={styles.detail}>Create a protocol to explore its activity by cycle.</Text>}
+            <Text style={styles.cycleHint}>Showing recorded events associated with the selected protocol, within its start/end dates when defined.</Text>
+          </View>
+        ) : null}
         <View style={styles.signalCard}>
           <View style={styles.signalHeader}>
             <View>
               <Text style={styles.signalEyebrow}>ACTIVITY SIGNAL</Text>
-              <Text style={styles.signalTitle}>Last 7 days · overview</Text>
+              <Text style={styles.signalTitle}>{viewMode === 'cycle' ? 'Cycle activity · last 7 days' : 'Last 7 days · overview'}</Text>
             </View>
-            <Text style={styles.signalTotal}>{filteredEntries.length}</Text>
+            <Text style={styles.signalTotal}>{viewMode === 'cycle' ? cycleEntries.length : filteredEntries.length}</Text>
           </View>
           <View style={styles.signalStrip}>
             {activity.map((day) => (
@@ -100,7 +128,7 @@ export default function LogScreen() {
         {filteredEntries.length === 0 ? (
           <View style={styles.emptyCard}>
             <View style={styles.emptyDot} />
-            <Text style={styles.cardTitle}>Your timeline starts here.</Text>
+            <Text style={styles.cardTitle}>{viewMode === 'cycle' ? 'No records for this cycle yet.' : 'Your timeline starts here.'}</Text>
             <Text style={styles.detail}>Log an item from Today and its history will appear automatically.</Text>
           </View>
         ) : groups.map(([day, dayEntries]) => (
@@ -139,9 +167,16 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   page: { padding: layout.pageInset, paddingBottom: layout.pageBottom },
   modeStrip: { flexDirection: 'row', gap: 5, marginBottom: 14 },
+  cycleSelector: { backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.accentBorder, borderRadius: radius.lg, padding: layout.cardInset, marginBottom: spacing.md, gap: 10 },
+  cycleOptions: { flexDirection: 'row', gap: 8, paddingVertical: 2 },
+  cyclePill: { backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 11, minHeight: 42 },
+  cyclePillActive: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
+  cyclePillText: { color: colors.muted, fontSize: 12, fontWeight: '800' },
+  cyclePillTextActive: { color: colors.accent },
+  cycleHint: { color: colors.muted, fontSize: 11, lineHeight: 17 },
   modeButton: { flex: 1, minWidth: 0, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: 11, alignItems: 'center', backgroundColor: colors.bgElevated },
   modeButtonActive: { borderColor: colors.accentBorder, backgroundColor: colors.accentSoft },
-  modeText: { fontSize: 9, fontWeight: '900', color: colors.muted },
+  modeText: { fontSize: 8, fontWeight: '900', color: colors.muted },
   modeTextActive: { color: colors.accent },
   eyebrow: { color: colors.accent, fontSize: type.eyebrow, fontWeight: '900', letterSpacing: 1.8, marginTop: spacing.md },
   title: { color: colors.text, fontSize: type.title, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
