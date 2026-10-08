@@ -122,11 +122,11 @@ export default function LogScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  page: { padding: spacing.lg, paddingBottom: 118 },
+  page: { padding: spacing.lg, paddingBottom: 148 },
   eyebrow: { color: colors.accent, fontSize: 11, fontWeight: '900', letterSpacing: 1.8, marginTop: spacing.md },
-  title: { color: colors.text, fontSize: type.hero, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
+  title: { color: colors.text, fontSize: 31, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
   body: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.xl, maxWidth: 340 },
-  signalCard: { backgroundColor: colors.bgElevated, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.accentBorder, padding: spacing.lg, marginBottom: spacing.xl },
+  signalCard: { backgroundColor: colors.bgElevated, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.accentBorder, padding: spacing.lg, marginBottom: spacing.md },
   signalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   signalEyebrow: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1.5 },
   signalTitle: { color: colors.text, fontSize: 20, fontWeight: '900', marginTop: 4 },
