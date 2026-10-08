@@ -130,12 +130,16 @@ export default function InsightsScreen() {
             {nextSupply ? <Text style={styles.sectionCount}>{supply.length}</Text> : null}
           </View>
           {supply.length ? supply.slice(0, 3).map((item, index) => (
-            <View key={item.name} style={[styles.supplyRow, index > 0 && styles.supplyDivider]}>
+            <View key={item.itemId} style={[styles.supplyRow, index > 0 && styles.supplyDivider]}>
               <View style={styles.supplyIdentity}>
                 <Text style={styles.supplyName} numberOfLines={1}>{item.name}</Text>
                 <Text style={styles.supplyAmount}>{item.remaining} {item.unit}</Text>
               </View>
               <View style={styles.reservoir}>
+                <View style={styles.reservoirLabels}>
+                  <Text style={styles.reservoirLabel}>CAPACITY</Text>
+                  <Text style={[styles.reservoirPercentage, item.projectedLowInDays === 0 && styles.warningText]}>{item.total > 0 ? `${Math.round(Math.max(0, Math.min(100, item.remaining / item.total * 100)))}%` : '—'}</Text>
+                </View>
                 <View style={styles.reservoirRail}>
                   <View style={[styles.reservoirFill, { width: `${Math.max(0, Math.min(100, item.total > 0 ? item.remaining / item.total * 100 : 0))}%` as `${number}%` }, item.projectedLowInDays === 0 && styles.reservoirFillLow]} />
                 </View>
@@ -226,6 +230,9 @@ const styles = StyleSheet.create({
   supplyName: { flex: 1, color: colors.text, fontSize: 16, fontWeight: '900' },
   supplyAmount: { color: colors.muted, fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] },
   reservoir: { gap: 7 },
+  reservoirLabels: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  reservoirLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 1.1, color: colors.subtle },
+  reservoirPercentage: { fontSize: 12, fontWeight: '900', color: colors.accent, fontVariant: ['tabular-nums'] },
   reservoirRail: { height: 8, backgroundColor: colors.bgElevated, borderRadius: radius.pill, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
   reservoirFill: { height: '100%', backgroundColor: colors.accent, borderRadius: radius.pill },
   reservoirFillLow: { backgroundColor: colors.warning },
