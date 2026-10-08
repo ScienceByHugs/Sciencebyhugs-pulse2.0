@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { ActivityIndicator, Alert, Animated, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing, type } from '@/theme';
+import { colors, layout, radius, spacing, type } from '@/theme';
+import { PulseMenu } from '@/components/PulseMenu';
 import { flushQuickLogOutbox, listDoseLogs, listRecentSites, listTodayItems, quickLog, type TimelineEntry, type TodayItem } from '@/services/pulse';
 import { isDueOnDate, localDayRange, nextScheduledTimeToday, scheduleTime } from '@/domain/schedule';
 import { sitesForRoute, suggestSite } from '@/domain/sites';
@@ -145,13 +146,7 @@ export default function TodayScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.accent} />}
       >
-        <View style={styles.brandRow}>
-          <View>
-            <Text style={styles.eyebrow}>SCIENCE BY HUGS</Text>
-            <Text style={styles.logo}>PULSE</Text>
-          </View>
-          <View style={styles.livePill}><Text style={styles.liveText}>LIVE</Text></View>
-        </View>
+        <PulseMenu />
 
         <View style={styles.heroHeader}>
           <Animated.View pointerEvents="none" style={[styles.completionPulse, {
@@ -280,7 +275,7 @@ export default function TodayScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  page: { padding: spacing.lg, paddingBottom: 148, gap: spacing.sm },
+  page: { padding: layout.pageInset, paddingBottom: layout.pageBottom, gap: spacing.sm },
   brandRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md, paddingTop: 0 },
   eyebrow: { color: colors.muted, fontSize: 10, letterSpacing: 2.4, fontWeight: '700' },
   logo: { color: colors.text, fontSize: 24, letterSpacing: 7, fontWeight: '900' },
@@ -311,7 +306,7 @@ const styles = StyleSheet.create({
   briefWarning: { color: colors.warning },
   briefLabel: { color: colors.subtle, fontSize: 7, fontWeight: '900', letterSpacing: .9, marginTop: 2 },
   welcomeSignature: { color: colors.accent, fontSize: 9, letterSpacing: 1.5, fontWeight: '900', marginTop: 8 },
-  greeting: { color: colors.text, fontSize: 31, fontWeight: '700', letterSpacing: -1.6, lineHeight: 36, maxWidth: 360 },
+  greeting: { color: colors.text, fontSize: type.hero, fontWeight: '700', letterSpacing: -1.6, lineHeight: 36, maxWidth: 360 },
   accentWord: { color: colors.accent },
   date: { color: colors.muted, fontSize: 14, marginTop: spacing.sm, marginBottom: spacing.sm },
   summaryRow: { flexDirection: 'row', backgroundColor: colors.bgElevated, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, paddingVertical: 15 },
@@ -320,7 +315,7 @@ const styles = StyleSheet.create({
   summaryLabel: { color: colors.subtle, fontSize: 9, fontWeight: '900', letterSpacing: 1.2, marginTop: 3 },
   summaryDivider: { width: 1, backgroundColor: colors.border },
   sectionLabel: { color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1.8, marginTop: spacing.md, marginBottom: 2 },
-  heroCard: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.md },
+  heroCard: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: layout.cardInset, borderWidth: 1, borderColor: colors.border, gap: spacing.md },
   lowCard: { borderColor: '#8f6b3d' },
   completedCard: { borderColor: colors.accentBorder, backgroundColor: colors.bgElevated },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md },
@@ -338,7 +333,7 @@ const styles = StyleSheet.create({
   lowText: { color: '#f6bd75', fontWeight: '900' },
   primaryButton: { backgroundColor: colors.accent, borderRadius: radius.md, paddingVertical: 16, alignItems: 'center', marginTop: 2 },
   primaryButtonText: { color: '#03111f', fontWeight: '900', letterSpacing: 1.1 },
-  emptyCard: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, marginTop: spacing.lg },
+  emptyCard: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: layout.cardInset, borderWidth: 1, borderColor: colors.border, marginTop: spacing.lg },
   cardTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
   disabled: { opacity: .55 }
 });
