@@ -64,7 +64,7 @@ export default function InsightsScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <Text style={styles.eyebrow}>WHAT CHANGED</Text>
         <Text style={styles.title}>Insights</Text>
         <Text style={styles.body}>Useful observations from your own records. Pulse does not prescribe or recommend treatment.</Text>
@@ -109,7 +109,7 @@ export default function InsightsScreen() {
             </View>
             {routineFingerprint.map((item, rowIndex) => (
               <View key={item.id} style={[styles.fingerprintRow, rowIndex > 0 && styles.fingerprintDivider]}>
-                <Text style={styles.fingerprintName} numberOfLines={1}>{item.name}</Text>
+                <Text style={styles.fingerprintName} numberOfLines={2}>{item.name}</Text>
                 {item.days.map((active, index) => (
                   <View key={`${item.id}-${index}`} style={[styles.fingerprintNode, active && styles.fingerprintNodeActive]}>
                     {active ? <View style={styles.fingerprintCore} /> : null}
@@ -125,7 +125,7 @@ export default function InsightsScreen() {
             <View style={styles.sectionHeaderCopy}>
               <Text style={styles.signalEyebrow}>SUPPLY RESERVOIR</Text>
               <Text style={styles.cardTitle}>What remains</Text>
-              <Text style={styles.detail}>A projection from your entered inventory and schedule; no date means the threshold was not reached in the 365-day forecast.</Text>
+              <Text style={styles.detail}>Projected from your recorded supply and schedule. NO DATE means the low threshold was not reached within 365 days.</Text>
             </View>
             {nextSupply ? <Text style={styles.sectionCount}>{supply.length}</Text> : null}
           </View>
@@ -146,7 +146,7 @@ export default function InsightsScreen() {
                 <View style={styles.supplyMeta}>
                   <Text style={styles.supplyDose}>~{item.dosesRemaining} DOSES</Text>
                   <Text style={[styles.forecast, item.projectedLowInDays === 0 && styles.warningText]}>
-                    {item.projectedLowInDays === null ? 'NO DATE' : item.projectedLowInDays === 0 ? 'LOW NOW' : `~${item.projectedLowInDays}D`}
+                    {item.projectedLowInDays === null ? 'NO DATE' : item.projectedLowInDays === 0 ? 'LOW NOW' : `LOW IN ~${item.projectedLowInDays}D`}
                   </Text>
                 </View>
               </View>
@@ -194,10 +194,10 @@ export default function InsightsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  page: { padding: spacing.lg, paddingBottom: 118 },
+  page: { padding: spacing.lg, paddingBottom: 148 },
   eyebrow: { color: colors.accent, fontSize: 11, fontWeight: '900', letterSpacing: 1.8, marginTop: spacing.md },
-  title: { color: colors.text, fontSize: type.hero, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
-  body: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.xl },
+  title: { color: colors.text, fontSize: 31, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
+  body: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.md },
   heroMetric: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.accentBorder, marginBottom: spacing.sm },
   heroMetricTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   heroMetricValue: { color: colors.text, fontSize: 42, fontWeight: '900', letterSpacing: -2, marginTop: 4, fontVariant: ['tabular-nums'], lineHeight: 48 },
@@ -213,11 +213,11 @@ const styles = StyleSheet.create({
   fingerprintCard: { backgroundColor: colors.bgElevated, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.accentBorder, marginBottom: spacing.sm },
   signalEyebrow: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1.5, marginBottom: 5 },
   fingerprintHeaderRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md, marginBottom: 5 },
-  fingerprintNameSpacer: { flex: 1.5 },
+  fingerprintNameSpacer: { flex: 2.5 },
   fingerprintDayLabel: { flex: 1, color: colors.subtle, textAlign: 'center', fontSize: 8, fontWeight: '900' },
-  fingerprintRow: { flexDirection: 'row', alignItems: 'center', minHeight: 42 },
+  fingerprintRow: { flexDirection: 'row', alignItems: 'center', minHeight: 52 },
   fingerprintDivider: { borderTopWidth: 1, borderTopColor: colors.border },
-  fingerprintName: { flex: 1.5, color: colors.text, fontSize: 11, fontWeight: '800', paddingRight: 8 },
+  fingerprintName: { flex: 2.5, color: colors.text, fontSize: 11, fontWeight: '800', paddingRight: 8 },
   fingerprintNode: { flex: 1, height: 24, alignItems: 'center', justifyContent: 'center' },
   fingerprintNodeActive: { opacity: 1 },
   fingerprintCore: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.accent, borderWidth: 2, borderColor: colors.accentSoft },

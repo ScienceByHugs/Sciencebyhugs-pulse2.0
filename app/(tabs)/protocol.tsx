@@ -27,6 +27,7 @@ export default function ProtocolScreen() {
   const [inventory, setInventory] = useState('');
   const [busy, setBusy] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
+  const [showMapDetails, setShowMapDetails] = useState(false);
   const [builderStep, setBuilderStep] = useState<1 | 2 | 3>(1);
 
   const activeProtocol = useMemo(() => protocols.find((p) => p.status === 'active'), [protocols]);
@@ -96,7 +97,7 @@ export default function ProtocolScreen() {
   }
 
   function buildSchedule() {
-    const startDate = new Date().toISOString().slice(0, 10);
+    const startDate = localDateKey();
     if (scheduleType === 'daily') return { type: 'daily', time };
     if (scheduleType === 'weekdays') return { type: 'weekdays', time, days };
     if (scheduleType === 'interval') return { type: 'interval', time, everyDays: Math.max(1, Number(everyDays) || 1), startDate };
@@ -140,7 +141,7 @@ export default function ProtocolScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <Text style={styles.eyebrow}>YOUR ROUTINE</Text>
         <Text style={styles.title}>Protocol</Text>
         <Text style={styles.body}>Build the routine once. Pulse handles the day-to-day tracking.</Text>
@@ -212,7 +213,8 @@ export default function ProtocolScreen() {
                   ))}
                 </View>
 
-                <View style={styles.mapScheduleList}>
+                <Pressable accessibilityRole="button" accessibilityLabel={showMapDetails ? 'Hide schedule details' : 'Show schedule details'} onPress={() => setShowMapDetails((value) => !value)} style={styles.mapDetailsToggle}><Text style={styles.mapDetailsToggleText}>{showMapDetails ? 'HIDE DETAILS  −' : 'VIEW SCHEDULE DETAILS  +'}</Text></Pressable>
+                {showMapDetails ? <View style={styles.mapScheduleList}>
                   {protocolMap.filter((day) => day.due.length > 0).slice(0, 4).map((day, index) => (
                     <View key={day.key} style={[styles.mapScheduleRow, index > 0 && styles.mapScheduleDivider]}>
                       <View style={styles.mapScheduleDay}>
@@ -225,7 +227,7 @@ export default function ProtocolScreen() {
                       </View>
                     </View>
                   ))}
-                </View>
+                </View> : null}
               </View>
             ) : null}
 
@@ -352,10 +354,10 @@ export default function ProtocolScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  page: { padding: spacing.lg, paddingBottom: 118 },
+  page: { padding: spacing.lg, paddingBottom: 148 },
   eyebrow: { color: colors.accent, fontSize: 11, fontWeight: '900', letterSpacing: 1.8, marginTop: spacing.md },
-  title: { color: colors.text, fontSize: type.hero, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
-  body: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.xl },
+  title: { color: colors.text, fontSize: 31, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
+  body: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.md },
   card: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: 12, marginBottom: spacing.md },
   cardTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
   cardDetail: { color: colors.muted, marginTop: 4, lineHeight: 20 },
@@ -386,7 +388,7 @@ const styles = StyleSheet.create({
   protocolRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm },
   activateButton: { borderRadius: radius.md, backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentBorder, paddingHorizontal: 12, paddingVertical: 9 },
   activateText: { color: colors.accent, fontWeight: '900', fontSize: 10, letterSpacing: .7 },
-  mapCard: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.accentBorder, marginBottom: spacing.md },
+  mapCard: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.md, borderWidth: 1, borderColor: colors.accentBorder, marginBottom: spacing.md },
   mapHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   mapTitle: { color: colors.text, fontSize: 22, fontWeight: '900', marginTop: 4, letterSpacing: -.5 },
   mapLegendPill: { backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentBorder, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 6 },
@@ -403,6 +405,8 @@ const styles = StyleSheet.create({
   loadFillEmpty: { height: 2, backgroundColor: colors.subtle },
   mapCount: { color: colors.subtle, fontSize: 9, fontWeight: '900', marginTop: 5, fontVariant: ['tabular-nums'] },
   mapCountActive: { color: colors.accent },
+  mapDetailsToggle: { paddingVertical: 14, alignItems: 'center', marginTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
+  mapDetailsToggleText: { fontSize: 10, fontWeight: '900', letterSpacing: 1.1, color: colors.accent },
   mapScheduleList: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
   mapScheduleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: 11 },
   mapScheduleDivider: { borderTopWidth: 1, borderTopColor: colors.border },

@@ -23,8 +23,6 @@ export default function YouScreen() {
   const [reminders, setReminders] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const shieldCount = [biometricLock, privateNotifications, reminders].filter(Boolean).length;
-  const shieldPercent = Math.round((shieldCount / 3) * 100);
 
   const load = useCallback(async () => {
     const [lock, privateMode, reminderMode] = await Promise.all([
@@ -136,7 +134,7 @@ export default function YouScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.page}>
+      <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
         <Text style={styles.eyebrow}>PRIVATE BY DESIGN</Text>
         <Text style={styles.title}>You</Text>
         <Text style={styles.body}>Control what Pulse stores on this device and what appears on your lock screen.</Text>
@@ -145,11 +143,11 @@ export default function YouScreen() {
           <View style={styles.shieldTop}>
             <View>
               <Text style={styles.shieldEyebrow}>PRIVACY SHIELD</Text>
-              <Text style={styles.shieldTitle}>{shieldCount === 3 ? 'Fully engaged' : shieldCount === 0 ? 'Minimal protection' : 'Partially engaged'}</Text>
+              <Text style={styles.shieldTitle}>Your privacy settings</Text>
             </View>
-            <Text style={styles.shieldPercent}>{shieldPercent}%</Text>
+
           </View>
-          <View style={styles.shieldTrack}><View style={[styles.shieldFill, { width: `${shieldPercent}%` as `${number}%` }]} /></View>
+
           <View style={styles.shieldGrid}>
             <View style={styles.shieldSignal}>
               <View style={[styles.shieldDot, biometricLock && styles.shieldDotActive]} />
@@ -168,11 +166,10 @@ export default function YouScreen() {
 
         <View style={styles.profileCard}>
           <View style={styles.avatar}><Text style={styles.avatarText}>{(session?.user.email ?? 'P').slice(0, 1).toUpperCase()}</Text></View>
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={styles.label}>SIGNED IN AS</Text>
-            <Text style={styles.value}>{session?.user.email ?? 'Pulse user'}</Text>
+            <Text style={styles.value} selectable>{session?.user.email ?? 'Pulse user'}</Text>
           </View>
-          <View style={styles.securePill}><Text style={styles.secureText}>SECURE</Text></View>
         </View>
 
         <Text style={styles.sectionLabel}>PRIVACY & REMINDERS</Text>
@@ -243,10 +240,10 @@ function SettingRow({ title, detail, value, disabled, onValueChange }: {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  page: { padding: spacing.lg, paddingBottom: 118 },
+  page: { padding: spacing.lg, paddingBottom: 148 },
   eyebrow: { color: colors.accent, fontSize: 11, fontWeight: '900', letterSpacing: 1.8, marginTop: spacing.md },
-  title: { color: colors.text, fontSize: type.hero, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
-  body: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.xl },
+  title: { color: colors.text, fontSize: 31, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
+  body: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.md },
   shieldCard: { backgroundColor: colors.bgElevated, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.accentBorder, marginBottom: spacing.md },
   shieldTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md },
   shieldEyebrow: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1.5 },
@@ -260,7 +257,7 @@ const styles = StyleSheet.create({
   shieldDotActive: { backgroundColor: colors.success },
   shieldSignalText: { color: colors.subtle, fontSize: 7, fontWeight: '900', letterSpacing: .7, textAlign: 'center' },
   shieldSignalTextActive: { color: colors.text },
-  profileCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.xl },
+  profileCard: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.xl },
   avatar: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentBorder, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: colors.accent, fontSize: 18, fontWeight: '900' },
   securePill: { borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 6, backgroundColor: colors.accentSoft },
