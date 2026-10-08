@@ -66,7 +66,7 @@ export default function TodayScreen() {
     const { start, end } = localDayRange();
     const completedIds = new Set(todayLogs.filter((entry) => {
       const logged = new Date(entry.logged_at);
-      return logged >= start && logged < end && entry.protocol_item_id;
+      return logged >= start && logged < end && entry.status === 'completed' && Boolean(entry.protocol_item_id);
     }).map((entry) => entry.protocol_item_id as string));
     const completed = items.filter((item) => completedIds.has(item.id)).length;
     return {
