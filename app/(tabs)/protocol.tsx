@@ -3,10 +3,10 @@ import { useFocusEffect } from 'expo-router';
 import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, layout, radius, spacing, type } from '@/theme';
 import { PulseMenu } from '@/components/PulseMenu';
-import { createProtocol, createProtocolItem, listProtocolItems, listProtocols, setProtocolItemActive, updateProtocolItemDetails, updateProtocolStatus, type TodayItem } from '@/services/pulse';
+import { createProtocol, createProtocolItem, listProtocolItems, listProtocols, setProtocolItemActive, updateProtocolItemDetails, updateProtocolDetails, updateProtocolStatus, type TodayItem } from '@/services/pulse';
 import { formatSchedule, isDueOnDate, localDateKey, scheduleTime } from '@/domain/schedule';
 
-type Protocol = { id: string; name: string; status: string };
+type Protocol = { id: string; name: string; status: string; starts_on: string | null; ends_on: string | null };
 const ROUTES = ['subcutaneous', 'intramuscular', 'oral', 'topical', 'other'] as const;
 const SCHEDULES = ['daily', 'weekdays', 'interval', 'cycle'] as const;
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -16,6 +16,10 @@ export default function ProtocolScreen() {
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [items, setItems] = useState<TodayItem[]>([]);
   const [protocolName, setProtocolName] = useState('');
+  const [editingProtocolId, setEditingProtocolId] = useState<string | null>(null);
+  const [editProtocolName, setEditProtocolName] = useState('');
+  const [editStartsOn, setEditStartsOn] = useState('');
+  const [editEndsOn, setEditEndsOn] = useState('');
   const [selectedProtocolId, setSelectedProtocolId] = useState<string | null>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editItemName, setEditItemName] = useState('');
@@ -94,6 +98,27 @@ export default function ProtocolScreen() {
       await load();
     } catch (error) {
       Alert.alert('Could not update protocol', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function startProtocolEdit(protocol: Protocol) {
+    setEditingProtocolId(protocol.id);
+    setEditProtocolName(protocol.name);
+    setEditStartsOn(protocol.starts_on ?? '');
+    setEditEndsOn(protocol.ends_on ?? '');
+  }
+
+  async function saveProtocolEdit() {
+    if (!editingProtocolId || busy) return;
+    try {
+      setBusy(true);
+      await updateProtocolDetails(editingProtocolId, editProtocolName, editStartsOn.trim() || null, editEndsOn.trim() || null);
+      setEditingProtocolId(null);
+      await load();
+    } catch (error) {
+      Alert.alert('Could not save protocol', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setBusy(false);
     }
@@ -207,6 +232,28 @@ export default function ProtocolScreen() {
                 <Text style={styles.smallLabel}>ACTIVE PROTOCOL</Text>
                 <Text style={styles.cardTitle}>{activeProtocol.name}</Text>
                 <Text style={styles.cardDetail}>{activeItems.length} tracked items</Text>
+                <View style={styles.protocolDateBand}>
+                  <View style={styles.protocolDateColumn}><Text style={styles.smallLabel}>START DATE</Text><Text style={styles.protocolDateText}>{activeProtocol.starts_on || 'NOT SET'}</Text></View>
+                  <View style={styles.protocolDateColumn}><Text style={styles.smallLabel}>END DATE</Text><Text style={styles.protocolDateText}>{activeProtocol.ends_on || 'OPEN-ENDED'}</Text></View>
+                </View>
+                {editingProtocolId === activeProtocol.id ? (
+                  <View style={styles.protocolEditPanel}>
+                    <Text style={styles.smallLabel}>PROTOCOL NAME</Text>
+                    <TextInput accessibilityLabel="Edit protocol name" maxLength={100} style={styles.input} value={editProtocolName} onChangeText={setEditProtocolName} placeholderTextColor={colors.muted} />
+                    <Text style={styles.smallLabel}>TRACKING DATES · OPTIONAL</Text>
+                    <View style={styles.twoCol}>
+                      <TextInput accessibilityLabel="Start date YYYY-MM-DD" autoCapitalize="none" style={[styles.input, styles.flex]} placeholder="Start YYYY-MM-DD" placeholderTextColor={colors.muted} value={editStartsOn} onChangeText={setEditStartsOn} />
+                      <TextInput accessibilityLabel="End date YYYY-MM-DD" autoCapitalize="none" style={[styles.input, styles.flex]} placeholder="End YYYY-MM-DD" placeholderTextColor={colors.muted} value={editEndsOn} onChangeText={setEditEndsOn} />
+                    </View>
+                    <Text style={styles.protocolEditHint}>Optional dates define a protocol's tracking window. Leave either blank for an open boundary.</Text>
+                    <View style={styles.protocolActions}>
+                      <Pressable accessibilityRole="button" disabled={busy} style={styles.secondaryAction} onPress={() => setEditingProtocolId(null)}><Text style={styles.secondaryActionText}>CANCEL</Text></Pressable>
+                      <Pressable accessibilityRole="button" disabled={busy} style={styles.primaryInline} onPress={() => void saveProtocolEdit()}><Text style={styles.primaryText}>{busy ? 'SAVING…' : 'SAVE CHANGES'}</Text></Pressable>
+                    </View>
+                  </View>
+                ) : (
+                  <Pressable accessibilityRole="button" accessibilityLabel="Edit protocol name and tracking dates" style={styles.protocolEditTrigger} onPress={() => startProtocolEdit(activeProtocol)}><Text style={styles.protocolEditTriggerText}>EDIT PROTOCOL DETAILS  ↗</Text></Pressable>
+                )}
                 <View style={styles.protocolActions}>
                   <Pressable style={styles.secondaryAction} disabled={busy} onPress={() => void setProtocolStatus(activeProtocol.id, 'paused')}>
                     <Text style={styles.secondaryActionText}>PAUSE</Text>
@@ -457,6 +504,14 @@ const styles = StyleSheet.create({
   itemCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.md, borderWidth: 1, borderColor: colors.border, marginTop: 8 },
   itemTitle: { color: colors.text, fontSize: 16, fontWeight: '800' },
   stock: { color: colors.accent, fontWeight: '800', fontSize: 12, maxWidth: 92, textAlign: 'right', flexShrink: 1 },
+  protocolDateBand: { flexDirection: 'row', gap: spacing.sm, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
+  protocolDateColumn: { flex: 1, minWidth: 0, gap: 5 },
+  protocolDateText: { color: colors.text, fontWeight: '800', fontSize: 12, fontVariant: ['tabular-nums'] },
+  protocolEditPanel: { gap: 11, padding: spacing.md, backgroundColor: colors.bgElevated, borderColor: colors.accentBorder, borderWidth: 1, borderRadius: radius.lg },
+  protocolEditTrigger: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, backgroundColor: colors.accentSoft, borderRadius: radius.md, borderWidth: 1, borderColor: colors.accentBorder },
+  protocolEditTriggerText: { color: colors.accent, fontSize: 11, fontWeight: '900', letterSpacing: .6 },
+  protocolEditHint: { color: colors.muted, fontSize: 11, lineHeight: 17 },
+  primaryInline: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent, borderRadius: radius.md },
   protocolActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   secondaryAction: { flex: 1, borderWidth: 1, borderColor: colors.accentBorder, borderRadius: radius.md, paddingVertical: 11, alignItems: 'center', backgroundColor: colors.accentSoft },
   secondaryActionText: { color: colors.accent, fontWeight: '900', fontSize: 11, letterSpacing: .8 },
