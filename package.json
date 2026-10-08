@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "doctor": "npx expo-doctor",
     "fix:icon": "node scripts/normalize-icon.cjs",
-    "eas-build-post-install": "node scripts/normalize-icon.cjs"
+    "eas-build-pre-install": "node scripts/normalize-icon.cjs"
   },
   "dependencies": {
     "@expo/ui": "~58.0.14",

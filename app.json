@@ -92,10 +92,6 @@
       "backgroundColor": "#050A10",
       "barStyle": "light-content",
       "translucent": false
-    },
-    "androidNavigationBar": {
-      "backgroundColor": "#050A10",
-      "barStyle": "light-content"
     }
   }
 }
