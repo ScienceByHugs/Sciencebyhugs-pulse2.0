@@ -2,7 +2,8 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
-import { colors, radius, spacing, type } from '@/theme';
+import { colors, layout, radius, spacing, type } from '@/theme';
+import { PulseMenu } from '@/components/PulseMenu';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import {
@@ -158,6 +159,7 @@ export default function YouScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
+        <PulseMenu />
         <Text style={styles.eyebrow}>PRIVATE BY DESIGN</Text>
         <Text style={styles.title}>You</Text>
         <Text style={styles.body}>Personalize your account, manage privacy and control your data.</Text>
@@ -269,11 +271,11 @@ function SettingRow({ title, detail, value, disabled, onValueChange }: {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  page: { padding: spacing.lg, paddingBottom: 148 },
-  eyebrow: { color: colors.accent, fontSize: 11, fontWeight: '900', letterSpacing: 1.8, marginTop: spacing.md },
-  title: { color: colors.text, fontSize: 31, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
-  body: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.md },
-  shieldCard: { backgroundColor: colors.bgElevated, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.accentBorder, marginBottom: spacing.md },
+  page: { padding: layout.pageInset, paddingBottom: layout.pageBottom },
+  eyebrow: { color: colors.accent, fontSize: type.eyebrow, fontWeight: '900', letterSpacing: 1.8, marginTop: spacing.md },
+  title: { color: colors.text, fontSize: type.title, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
+  body: { color: colors.muted, fontSize: type.body, lineHeight: 21, marginTop: spacing.sm, marginBottom: spacing.md },
+  shieldCard: { backgroundColor: colors.bgElevated, borderRadius: radius.xl, padding: layout.cardInset, borderWidth: 1, borderColor: colors.accentBorder, marginBottom: spacing.md },
   shieldTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md },
   shieldEyebrow: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1.5 },
   shieldTitle: { color: colors.text, fontSize: 20, fontWeight: '900', marginTop: 4 },
@@ -289,15 +291,15 @@ const styles = StyleSheet.create({
   profileEditor: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.md, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.md },
   profileInput: { marginTop: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 12, color: colors.text, backgroundColor: colors.bgElevated, fontSize: 16 },
   profileSaveDisabled: { opacity: .45 },
-  profileCard: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.xl },
+  profileCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.panel, borderRadius: radius.xl, padding: layout.cardInset, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.xl },
   avatar: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentBorder, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: colors.accent, fontSize: 18, fontWeight: '900' },
   securePill: { borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 6, backgroundColor: colors.accentSoft },
   secureText: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: .8 },
   sectionLabel: { color: colors.subtle, fontSize: 10, fontWeight: '900', letterSpacing: 1.4, marginTop: spacing.sm, marginBottom: spacing.sm },
-  card: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.lg },
+  card: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: layout.cardInset, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.lg },
   label: { color: colors.muted, fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
-  value: { color: colors.text, fontSize: 16, fontWeight: '800', marginTop: 6 },
+  value: { color: colors.text, fontSize: 15, fontWeight: '800', marginTop: 6, flexShrink: 1 },
   settingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   settingCopy: { flex: 1 },
   cardTitle: { color: colors.text, fontSize: 16, fontWeight: '800' },

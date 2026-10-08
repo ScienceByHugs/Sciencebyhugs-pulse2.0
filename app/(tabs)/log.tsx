@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing, type } from '@/theme';
+import { colors, layout, radius, spacing, type } from '@/theme';
+import { PulseMenu } from '@/components/PulseMenu';
 import { localDateKey } from '@/domain/schedule';
 import { listDoseLogs, type TimelineEntry } from '@/services/pulse';
 
@@ -69,6 +70,7 @@ export default function LogScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
+        <PulseMenu />
         <Text style={styles.eyebrow}>YOUR HISTORY</Text>
         <Text style={styles.title}>Timeline</Text>
         <Text style={styles.body}>A clear record of what you logged, when you logged it, and where.</Text>
@@ -135,15 +137,15 @@ export default function LogScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  page: { padding: spacing.lg, paddingBottom: 148 },
+  page: { padding: layout.pageInset, paddingBottom: layout.pageBottom },
   modeStrip: { flexDirection: 'row', gap: 5, marginBottom: 14 },
   modeButton: { flex: 1, minWidth: 0, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: 11, alignItems: 'center', backgroundColor: colors.bgElevated },
   modeButtonActive: { borderColor: colors.accentBorder, backgroundColor: colors.accentSoft },
   modeText: { fontSize: 9, fontWeight: '900', color: colors.muted },
   modeTextActive: { color: colors.accent },
-  eyebrow: { color: colors.accent, fontSize: 11, fontWeight: '900', letterSpacing: 1.8, marginTop: spacing.md },
-  title: { color: colors.text, fontSize: 31, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
-  body: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.xl, maxWidth: 340 },
+  eyebrow: { color: colors.accent, fontSize: type.eyebrow, fontWeight: '900', letterSpacing: 1.8, marginTop: spacing.md },
+  title: { color: colors.text, fontSize: type.title, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
+  body: { color: colors.muted, fontSize: type.body, lineHeight: 21, marginTop: spacing.sm, marginBottom: spacing.xl, maxWidth: 340 },
   signalCard: { backgroundColor: colors.bgElevated, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.accentBorder, padding: spacing.lg, marginBottom: spacing.md },
   signalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   signalEyebrow: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1.5 },

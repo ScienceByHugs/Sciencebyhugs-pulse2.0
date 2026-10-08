@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { colors, radius, spacing, type } from '@/theme';
+import { colors, layout, radius, spacing, type } from '@/theme';
+import { PulseMenu } from '@/components/PulseMenu';
 import { createProtocol, createProtocolItem, listProtocolItems, listProtocols, updateProtocolStatus, type TodayItem } from '@/services/pulse';
 import { formatSchedule, isDueOnDate, localDateKey, scheduleTime } from '@/domain/schedule';
 
@@ -147,6 +148,7 @@ export default function ProtocolScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <PulseMenu />
         <Text style={styles.eyebrow}>YOUR ROUTINE</Text>
         <Text style={styles.title}>Protocol</Text>
         <Text style={styles.body}>Build the routine once. Pulse handles the day-to-day tracking.</Text>
@@ -367,14 +369,14 @@ export default function ProtocolScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  page: { padding: spacing.lg, paddingBottom: 148 },
+  page: { padding: layout.pageInset, paddingBottom: layout.pageBottom },
   launchRow: { flexDirection: 'row', gap: 8, marginBottom: spacing.md },
   launchButton: { flex: 1, minWidth: 0, paddingVertical: 14, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft, borderColor: colors.accentBorder, borderWidth: 1, borderRadius: radius.md },
   launchText: { color: colors.accent, fontWeight: '900', fontSize: 10, letterSpacing: .7, textAlign: 'center' },
-  eyebrow: { color: colors.accent, fontSize: 11, fontWeight: '900', letterSpacing: 1.8, marginTop: spacing.md },
-  title: { color: colors.text, fontSize: 31, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
-  body: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.md },
-  card: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: 12, marginBottom: spacing.md },
+  eyebrow: { color: colors.accent, fontSize: type.eyebrow, fontWeight: '900', letterSpacing: 1.8, marginTop: spacing.md },
+  title: { color: colors.text, fontSize: type.title, fontWeight: '800', letterSpacing: -1.4, marginTop: spacing.sm },
+  body: { color: colors.muted, fontSize: type.body, lineHeight: 21, marginTop: spacing.sm, marginBottom: spacing.md },
+  card: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: layout.cardInset, borderWidth: 1, borderColor: colors.border, gap: 12, marginBottom: spacing.md },
   cardTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
   cardDetail: { color: colors.muted, marginTop: 4, lineHeight: 20 },
   scheduleText: { color: colors.accent, marginTop: 5, fontSize: 12, fontWeight: '700' },
@@ -393,9 +395,9 @@ const styles = StyleSheet.create({
   day: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, backgroundColor: colors.panel2 },
   dayActive: { borderColor: colors.accentBorder, backgroundColor: colors.accentSoft },
   dayText: { color: colors.muted, fontWeight: '800' },
-  itemCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.md, borderWidth: 1, borderColor: colors.border, marginTop: 8 },
+  itemCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.md, borderWidth: 1, borderColor: colors.border, marginTop: 8 },
   itemTitle: { color: colors.text, fontSize: 16, fontWeight: '800' },
-  stock: { color: colors.accent, fontWeight: '800', fontSize: 12 },
+  stock: { color: colors.accent, fontWeight: '800', fontSize: 12, maxWidth: 92, textAlign: 'right', flexShrink: 1 },
   protocolActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   secondaryAction: { flex: 1, borderWidth: 1, borderColor: colors.accentBorder, borderRadius: radius.md, paddingVertical: 11, alignItems: 'center', backgroundColor: colors.accentSoft },
   secondaryActionText: { color: colors.accent, fontWeight: '900', fontSize: 11, letterSpacing: .8 },
@@ -431,11 +433,11 @@ const styles = StyleSheet.create({
   mapScheduleDate: { color: colors.text, fontSize: 18, lineHeight: 22, fontWeight: '900', fontVariant: ['tabular-nums'] },
   mapScheduleItems: { color: colors.text, fontSize: 13, fontWeight: '800' },
   mapScheduleMeta: { color: colors.muted, fontSize: 10, marginTop: 3, fontVariant: ['tabular-nums'] },
-  addItemLaunch: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.bgElevated, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.xl },
+  addItemLaunch: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.bgElevated, borderRadius: radius.xl, padding: layout.cardInset, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.xl },
   addIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accentBorder },
   addIconText: { color: colors.accent, fontSize: 23, lineHeight: 27 },
   chevron: { color: colors.subtle, fontSize: 28 },
-  builderCard: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.accentBorder, gap: spacing.md, marginBottom: spacing.xl },
+  builderCard: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: layout.cardInset, borderWidth: 1, borderColor: colors.accentBorder, gap: spacing.md, marginBottom: spacing.xl },
   builderTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md },
   builderTitle: { color: colors.text, fontSize: 22, fontWeight: '800', marginTop: 5 },
   closeText: { color: colors.muted, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
