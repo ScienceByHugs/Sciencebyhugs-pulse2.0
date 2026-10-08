@@ -25,8 +25,9 @@ function parseLocalDate(value: string) {
 }
 
 function daysBetween(a: Date, b: Date) {
-  const ms = dateOnly(a).getTime() - dateOnly(b).getTime();
-  return Math.floor(ms / 86400000);
+  const aDay = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
+  const bDay = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
+  return Math.round((aDay - bDay) / 86400000);
 }
 
 export function scheduleTime(schedule: Record<string, unknown>) {
@@ -110,9 +111,15 @@ export function nextScheduledTimeToday(schedules: Record<string, unknown>[], now
   return schedules
     .map(scheduleTime)
     .filter((time): time is string => Boolean(time))
-    .sort()
-    .find((time) => {
-      const [hour = '0', minute = '0'] = time.split(':');
-      return Number(hour) * 60 + Number(minute) >= currentMinutes;
-    });
+    .map((time) => {
+      const match = /^(\d{1,2}):(\d{2})$/.exec(time);
+      if (!match) return null;
+      const hour = Number(match[1]);
+      const minute = Number(match[2]);
+      if (hour > 23 || minute > 59) return null;
+      return { time, minutes: hour * 60 + minute };
+    })
+    .filter((entry): entry is { time: string; minutes: number } => entry !== null)
+    .filter((entry) => entry.minutes >= currentMinutes)
+    .sort((a, b) => a.minutes - b.minutes)[0]?.time;
 }
