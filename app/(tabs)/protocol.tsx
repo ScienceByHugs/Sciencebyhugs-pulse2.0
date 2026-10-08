@@ -50,7 +50,9 @@ export default function ProtocolScreen() {
       const date = new Date();
       date.setHours(12, 0, 0, 0);
       date.setDate(date.getDate() + offset);
-      const due = activeItems.filter((item) => item.active !== false && isDueOnDate(item.schedule, date));
+      const key = localDateKey(date);
+      const withinWindow = (!activeProtocol?.starts_on || key >= activeProtocol.starts_on) && (!activeProtocol?.ends_on || key <= activeProtocol.ends_on);
+      const due = withinWindow ? activeItems.filter((item) => item.active !== false && isDueOnDate(item.schedule, date)) : [];
       return {
         key: localDateKey(date),
         label: formatter.format(date).slice(0, 3).toUpperCase(),
@@ -60,7 +62,7 @@ export default function ProtocolScreen() {
         firstTime: due.map((item) => scheduleTime(item.schedule)).filter((value): value is string => Boolean(value)).sort()[0]
       };
     });
-  }, [activeItems]);
+  }, [activeItems, activeProtocol]);
 
   const load = useCallback(async () => {
     try {
@@ -245,7 +247,7 @@ export default function ProtocolScreen() {
                       <TextInput accessibilityLabel="Start date YYYY-MM-DD" autoCapitalize="none" style={[styles.input, styles.flex]} placeholder="Start YYYY-MM-DD" placeholderTextColor={colors.muted} value={editStartsOn} onChangeText={setEditStartsOn} />
                       <TextInput accessibilityLabel="End date YYYY-MM-DD" autoCapitalize="none" style={[styles.input, styles.flex]} placeholder="End YYYY-MM-DD" placeholderTextColor={colors.muted} value={editEndsOn} onChangeText={setEditEndsOn} />
                     </View>
-                    <Text style={styles.protocolEditHint}>Optional dates define a protocol's tracking window. Leave either blank for an open boundary.</Text>
+                    <Text style={styles.protocolEditHint}>Dates restrict Today and the protocol map to that window. Leave either blank for an open boundary.</Text>
                     <View style={styles.protocolActions}>
                       <Pressable accessibilityRole="button" disabled={busy} style={styles.secondaryAction} onPress={() => setEditingProtocolId(null)}><Text style={styles.secondaryActionText}>CANCEL</Text></Pressable>
                       <Pressable accessibilityRole="button" disabled={busy} style={styles.primaryInline} onPress={() => void saveProtocolEdit()}><Text style={styles.primaryText}>{busy ? 'SAVING…' : 'SAVE CHANGES'}</Text></Pressable>
