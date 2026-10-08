@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { localDateKey } from '@/domain/schedule';
+import { localDateKey, validateTrackedSchedule } from '@/domain/schedule';
 import { enqueueQuickLog, readOutbox, removeQuickLog, type QuickLogPayload } from '@/lib/outbox';
 
 export type InventorySummary = {
@@ -105,6 +105,19 @@ export async function updateProtocolItemDetails(itemId: string, name: string, ca
     .eq('id', itemId)
     .eq('user_id', userId);
   if (error) throw error;
+}
+
+export async function updateProtocolItemSchedule(itemId: string, schedule: Record<string, unknown>) {
+  const userId = await currentUserId();
+  const validated = validateTrackedSchedule(schedule);
+  const { data, error } = await supabase.from('protocol_items')
+    .update({ schedule: validated })
+    .eq('id', itemId)
+    .eq('user_id', userId)
+    .select('id')
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error('Substance not found or you do not have permission to update it.');
 }
 
 export async function createProtocol(name: string) {

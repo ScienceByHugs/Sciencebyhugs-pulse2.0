@@ -92,6 +92,51 @@ export function formatSchedule(schedule: Record<string, unknown>) {
   return 'As needed';
 }
 
+
+// Validate user-authored schedules before saving them to a tracked substance.
+// Existing optional temporary overrides are kept separate from the edited base schedule.
+export function validateTrackedSchedule(schedule: Record<string, unknown>) {
+  const type = schedule.type;
+  if (!['daily', 'weekdays', 'interval', 'cycle', 'as_needed'].includes(String(type))) {
+    throw new Error('Choose a supported schedule.');
+  }
+  const time = schedule.time;
+  if (type !== 'as_needed' && time !== undefined) {
+    if (typeof time !== 'string' || !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(time)) {
+      throw new Error('Use a valid time in 24-hour HH:MM format.');
+    }
+  }
+  if (type === 'weekdays') {
+    const days = schedule.days;
+    if (!Array.isArray(days) || days.length === 0 || days.some((d) => !Number.isInteger(d) || d < 0 || d > 6)) {
+      throw new Error('Choose at least one valid weekday.');
+    }
+  }
+  if (type === 'interval' || type === 'cycle') {
+    const startDate = schedule.startDate;
+    if (typeof startDate !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(startDate)) {
+      throw new Error('Enter the schedule anchor date in YYYY-MM-DD format.');
+    }
+    const [year = 0, month = 0, day = 0] = startDate.split('-').map(Number);
+    const check = new Date(Date.UTC(year, month - 1, day));
+    if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) {
+      throw new Error('Enter a real schedule anchor date.');
+    }
+  }
+  if (type === 'interval' && (!Number.isInteger(schedule.everyDays) || Number(schedule.everyDays) < 1 || Number(schedule.everyDays) > 365)) {
+    throw new Error('Interval must be a whole number from 1 to 365 days.');
+  }
+  if (type === 'cycle') {
+    if (!Number.isInteger(schedule.onDays) || Number(schedule.onDays) < 1 || Number(schedule.onDays) > 365) {
+      throw new Error('Cycle on-days must be a whole number from 1 to 365.');
+    }
+    if (!Number.isInteger(schedule.offDays) || Number(schedule.offDays) < 0 || Number(schedule.offDays) > 365) {
+      throw new Error('Cycle off-days must be a whole number from 0 to 365.');
+    }
+  }
+  return schedule;
+}
+
 export function localDateKey(date = new Date()) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');

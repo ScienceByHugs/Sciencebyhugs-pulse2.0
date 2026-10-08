@@ -4,7 +4,7 @@ import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput
 import { colors, layout, radius, spacing, type } from '@/theme';
 import { PulseMenu } from '@/components/PulseMenu';
 import { SubstanceArtwork } from '@/components/SubstanceArtwork';
-import { createProtocol, createProtocolItem, listProtocolItems, listProtocols, setProtocolItemActive, updateProtocolItemDetails, updateProtocolDetails, updateProtocolStatus, type TodayItem } from '@/services/pulse';
+import { createProtocol, createProtocolItem, listProtocolItems, listProtocols, setProtocolItemActive, updateProtocolItemDetails, updateProtocolItemSchedule, updateProtocolDetails, updateProtocolStatus, type TodayItem } from '@/services/pulse';
 import { formatSchedule, isDueOnDate, localDateKey, scheduleTime } from '@/domain/schedule';
 
 type Protocol = { id: string; name: string; status: string; starts_on: string | null; ends_on: string | null };
@@ -25,6 +25,15 @@ export default function ProtocolScreen() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editItemName, setEditItemName] = useState('');
   const [editCategory, setEditCategory] = useState('Other');
+  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
+  const [editScheduleType, setEditScheduleType] = useState<'daily' | 'weekdays' | 'interval' | 'cycle' | 'as_needed'>('daily');
+  const [editTime, setEditTime] = useState('');
+  const [editDays, setEditDays] = useState<number[]>([]);
+  const [editEveryDays, setEditEveryDays] = useState('2');
+  const [editOnDays, setEditOnDays] = useState('5');
+  const [editOffDays, setEditOffDays] = useState('2');
+  const [editStartDate, setEditStartDate] = useState('');
+  const [editOriginalSchedule, setEditOriginalSchedule] = useState<Record<string, unknown>>({});
   const [itemName, setItemName] = useState('');
   const [category, setCategory] = useState<string>('Peptide');
   const [showNewProtocol, setShowNewProtocol] = useState(false);
@@ -154,6 +163,51 @@ export default function ProtocolScreen() {
       await load();
     } catch (error) {
       Alert.alert('Could not save substance', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function beginScheduleEdit(item: TodayItem) {
+    const schedule = item.schedule;
+    const kind = String(schedule.type);
+    setEditingScheduleId(item.id);
+    setEditingItemId(null);
+    setEditOriginalSchedule(schedule);
+    setEditScheduleType(kind === 'weekdays' || kind === 'interval' || kind === 'cycle' || kind === 'as_needed' ? kind : 'daily');
+    setEditTime(typeof schedule.time === 'string' ? schedule.time : '');
+    setEditDays(Array.isArray(schedule.days) ? schedule.days.filter((d): d is number => typeof d === 'number') : [1, 2, 3, 4, 5]);
+    setEditEveryDays(String(schedule.everyDays ?? 2));
+    setEditOnDays(String(schedule.onDays ?? 5));
+    setEditOffDays(String(schedule.offDays ?? 2));
+    setEditStartDate(typeof schedule.startDate === 'string' ? schedule.startDate : localDateKey());
+  }
+
+  async function saveScheduleEdit() {
+    if (!editingScheduleId || busy) return;
+    const parsedPositive = (value: string) => /^\\d+$/.test(value) ? Number(value) : NaN;
+    const next: Record<string, unknown> = editScheduleType === 'as_needed'
+      ? { type: 'as_needed' }
+      : { type: editScheduleType, ...(editTime.trim() ? { time: editTime.trim() } : {}) };
+    if (editScheduleType === 'weekdays') next.days = editDays;
+    if (editScheduleType === 'interval') {
+      next.everyDays = parsedPositive(editEveryDays.trim());
+      next.startDate = editStartDate.trim();
+    }
+    if (editScheduleType === 'cycle') {
+      next.onDays = parsedPositive(editOnDays.trim());
+      next.offDays = parsedPositive(editOffDays.trim());
+      next.startDate = editStartDate.trim();
+    }
+    // Retain an existing short-term pause/override when editing the recurring pattern.
+    if (editOriginalSchedule.temporary) next.temporary = editOriginalSchedule.temporary;
+    try {
+      setBusy(true);
+      await updateProtocolItemSchedule(editingScheduleId, next);
+      setEditingScheduleId(null);
+      await load();
+    } catch (error) {
+      Alert.alert('Could not save schedule', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setBusy(false);
     }
@@ -478,13 +532,57 @@ export default function ProtocolScreen() {
                     </View>
                   ) : null}
                   <View style={styles.signatureActions}>
-                    <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${item.name}`} style={styles.signatureEditButton} disabled={busy} onPress={() => startEdit(item)}>
+                    <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${item.name}`} style={styles.signatureEditButton} disabled={busy} onPress={() => { setEditingScheduleId(null); startEdit(item); }}>
                       <Text style={styles.signatureEditText}>EDIT DETAILS  ↗</Text>
                     </Pressable>
                     <Pressable accessibilityRole="button" accessibilityLabel={item.active === false ? `Resume ${item.name}` : `Pause ${item.name}`} style={styles.signaturePauseButton} disabled={busy} onPress={() => void toggleItem(item)}>
                       <Text style={styles.signaturePauseText}>{item.active === false ? 'RESUME' : 'PAUSE'}</Text>
                     </Pressable>
                   </View>
+                  <Pressable accessibilityRole="button" accessibilityLabel={`Edit schedule for ${item.name}`} style={styles.scheduleEditTrigger} disabled={busy} onPress={() => beginScheduleEdit(item)}>
+                    <Text style={styles.scheduleEditTriggerText}>EDIT SCHEDULE  ↗</Text>
+                    <Text style={styles.scheduleEditSubtext}>Adjust the tracking pattern without removing history</Text>
+                  </Pressable>
+                  {editingScheduleId === item.id ? (
+                    <View style={styles.scheduleEditor}>
+                      <Text style={styles.smallLabel}>TRACKING PATTERN</Text>
+                      <View style={styles.chips}>{(['daily', 'weekdays', 'interval', 'cycle', 'as_needed'] as const).map((kind) => (
+                        <Pressable key={kind} accessibilityRole="button" accessibilityState={{ selected: editScheduleType === kind }} onPress={() => setEditScheduleType(kind)} style={[styles.chip, editScheduleType === kind && styles.chipActive]}>
+                          <Text style={[styles.chipText, editScheduleType === kind && styles.chipTextActive]}>{kind === 'as_needed' ? 'As needed' : kind}</Text>
+                        </Pressable>
+                      ))}</View>
+                      {editScheduleType !== 'as_needed' ? (
+                        <><Text style={styles.smallLabel}>TIME · 24-HOUR FORMAT (OPTIONAL)</Text>
+                        <TextInput style={styles.input} accessibilityLabel="Scheduled time HH:MM" placeholder="08:00" placeholderTextColor={colors.muted} value={editTime} onChangeText={setEditTime} /></>
+                      ) : null}
+                      {editScheduleType === 'weekdays' ? (
+                        <><Text style={styles.smallLabel}>DAYS OF THE WEEK</Text><View style={styles.dayRow}>{DAY_LABELS.map((label, day) => (
+                          <Pressable key={day} accessibilityRole="button" accessibilityState={{ selected: editDays.includes(day) }} style={[styles.day, editDays.includes(day) && styles.dayActive]} onPress={() => setEditDays((current) => current.includes(day) ? current.filter((d) => d !== day) : [...current, day].sort())}>
+                            <Text style={[styles.dayText, editDays.includes(day) && styles.chipTextActive]}>{label}</Text>
+                          </Pressable>
+                        ))}</View></>
+                      ) : null}
+                      {editScheduleType === 'interval' || editScheduleType === 'cycle' ? (
+                        <><Text style={styles.smallLabel}>ANCHOR DATE · YYYY-MM-DD</Text>
+                        <TextInput style={styles.input} accessibilityLabel="Schedule start date" placeholder="YYYY-MM-DD" placeholderTextColor={colors.muted} value={editStartDate} onChangeText={setEditStartDate} autoCapitalize="none" />
+                        <Text style={styles.scheduleHint}>Changing the anchor date will change where interval or cycle days fall.</Text></>
+                      ) : null}
+                      {editScheduleType === 'interval' ? (
+                        <><Text style={styles.smallLabel}>REPEAT EVERY (DAYS)</Text><TextInput style={styles.input} accessibilityLabel="Repeat interval days" keyboardType="number-pad" value={editEveryDays} onChangeText={setEditEveryDays} /></>
+                      ) : null}
+                      {editScheduleType === 'cycle' ? (
+                        <><Text style={styles.smallLabel}>CYCLE PATTERN</Text><View style={styles.twoCol}>
+                          <TextInput style={[styles.input, styles.flex]} accessibilityLabel="Cycle on days" placeholder="Days on" placeholderTextColor={colors.muted} keyboardType="number-pad" value={editOnDays} onChangeText={setEditOnDays} />
+                          <TextInput style={[styles.input, styles.flex]} accessibilityLabel="Cycle off days" placeholder="Days off" placeholderTextColor={colors.muted} keyboardType="number-pad" value={editOffDays} onChangeText={setEditOffDays} />
+                        </View></>
+                      ) : null}
+                      <Text style={styles.scheduleHint}>New settings apply to future tracking. Your existing recorded entries are preserved.</Text>
+                      <View style={styles.builderNav}>
+                        <Pressable accessibilityRole="button" style={styles.backButton} disabled={busy} onPress={() => setEditingScheduleId(null)}><Text style={styles.backText}>CANCEL</Text></Pressable>
+                        <Pressable accessibilityRole="button" style={[styles.primary, styles.flex]} disabled={busy} onPress={() => void saveScheduleEdit()}><Text style={styles.primaryText}>{busy ? 'SAVING…' : 'SAVE SCHEDULE'}</Text></Pressable>
+                      </View>
+                    </View>
+                  ) : null}
                   {editingItemId === item.id ? (
                     <View style={styles.editCard}>
                       <Text style={styles.smallLabel}>EDIT SUBSTANCE · {item.name}</Text>
@@ -545,6 +643,11 @@ const styles = StyleSheet.create({
   libraryTitle: { color: colors.text, fontSize: 23, fontWeight: '900', letterSpacing: -0.7 },
   librarySubtitle: { color: colors.muted, fontSize: 12, marginTop: 4 },
   libraryIndex: { color: colors.subtle, fontSize: 9, fontWeight: '900', letterSpacing: 1.3 },
+  scheduleEditTrigger: { backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.accentBorder, borderRadius: radius.md, minHeight: 55, paddingVertical: 11, paddingHorizontal: 13, justifyContent: 'center', gap: 4 },
+  scheduleEditTriggerText: { color: colors.accent, fontWeight: '900', fontSize: 11, letterSpacing: 0.7 },
+  scheduleEditSubtext: { color: colors.muted, fontSize: 11, lineHeight: 16 },
+  scheduleEditor: { backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.accentBorder, padding: spacing.md, borderRadius: radius.lg, gap: spacing.md },
+  scheduleHint: { color: colors.muted, fontSize: 11, lineHeight: 17 },
   signatureCard: { backgroundColor: colors.panel, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border, padding: layout.cardInset, marginBottom: spacing.md, overflow: 'hidden', gap: 14 },
   signatureCardPaused: { borderColor: colors.border, backgroundColor: colors.bgElevated },
   signatureAccent: { position: 'absolute', left: 0, top: 22, bottom: 22, width: 3, borderRadius: 3, backgroundColor: colors.accent },
