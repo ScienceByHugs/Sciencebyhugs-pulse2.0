@@ -4,6 +4,7 @@ import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput
 import { colors, layout, radius, spacing, type } from '@/theme';
 import { PulseMenu } from '@/components/PulseMenu';
 import { SubstanceArtwork } from '@/components/SubstanceArtwork';
+import { ProtocolDatePicker, ProtocolTimePicker, displayProtocolDate } from '@/components/ProtocolPickers';
 import { addInventoryContainer, correctInventoryRemaining, createProtocol, createProtocolItem, listProtocolItems, listProtocols, setProtocolItemActive, setProtocolItemArchived, updateProtocolItemDetails, updateProtocolItemSchedule, updateProtocolDetails, updateProtocolStatus, type TodayItem } from '@/services/pulse';
 import { formatSchedule, isDueOnDate, localDateKey, scheduleTime } from '@/domain/schedule';
 
@@ -353,8 +354,8 @@ export default function ProtocolScreen() {
                 <Text style={styles.cardTitle}>{activeProtocol.name}</Text>
                 <Text style={styles.cardDetail}>{visibleItems.length} tracked items</Text>
                 <View style={styles.protocolDateBand}>
-                  <View style={styles.protocolDateColumn}><Text style={styles.smallLabel}>START DATE</Text><Text style={styles.protocolDateText}>{activeProtocol.starts_on || 'NOT SET'}</Text></View>
-                  <View style={styles.protocolDateColumn}><Text style={styles.smallLabel}>END DATE</Text><Text style={styles.protocolDateText}>{activeProtocol.ends_on || 'OPEN-ENDED'}</Text></View>
+                  <View style={styles.protocolDateColumn}><Text style={styles.smallLabel}>START DATE</Text><Text style={styles.protocolDateText}>{displayProtocolDate(activeProtocol.starts_on)}</Text></View>
+                  <View style={styles.protocolDateColumn}><Text style={styles.smallLabel}>END DATE</Text><Text style={styles.protocolDateText}>{displayProtocolDate(activeProtocol.ends_on)}</Text></View>
                 </View>
                 {editingProtocolId === activeProtocol.id ? (
                   <View style={styles.protocolEditPanel}>
@@ -362,8 +363,8 @@ export default function ProtocolScreen() {
                     <TextInput accessibilityLabel="Edit protocol name" maxLength={100} style={styles.input} value={editProtocolName} onChangeText={setEditProtocolName} placeholderTextColor={colors.muted} />
                     <Text style={styles.smallLabel}>TRACKING DATES · OPTIONAL</Text>
                     <View style={styles.twoCol}>
-                      <TextInput accessibilityLabel="Start date YYYY-MM-DD" autoCapitalize="none" style={[styles.input, styles.flex]} placeholder="Start YYYY-MM-DD" placeholderTextColor={colors.muted} value={editStartsOn} onChangeText={setEditStartsOn} />
-                      <TextInput accessibilityLabel="End date YYYY-MM-DD" autoCapitalize="none" style={[styles.input, styles.flex]} placeholder="End YYYY-MM-DD" placeholderTextColor={colors.muted} value={editEndsOn} onChangeText={setEditEndsOn} />
+                      <ProtocolDatePicker label="Start date" value={editStartsOn} onChange={setEditStartsOn} optional />
+                      <ProtocolDatePicker label="End date" value={editEndsOn} onChange={setEditEndsOn} optional />
                     </View>
                     <Text style={styles.protocolEditHint}>Dates restrict Today and the protocol map to that window. Leave either blank for an open boundary.</Text>
                     <View style={styles.protocolActions}>
@@ -500,7 +501,7 @@ export default function ProtocolScreen() {
                   </Pressable>
                 ))}
               </View>
-              <TextInput style={styles.input} placeholder="Time (24h)" placeholderTextColor={colors.muted} value={time} onChangeText={setTime} />
+              <ProtocolTimePicker label="Scheduled time" value={time} onChange={setTime} />
 
               {scheduleType === 'weekdays' ? (
                 <View style={styles.dayRow}>
@@ -654,8 +655,8 @@ export default function ProtocolScreen() {
                         </Pressable>
                       ))}</View>
                       {editScheduleType !== 'as_needed' ? (
-                        <><Text style={styles.smallLabel}>TIME · 24-HOUR FORMAT (OPTIONAL)</Text>
-                        <TextInput style={styles.input} accessibilityLabel="Scheduled time HH:MM" placeholder="08:00" placeholderTextColor={colors.muted} value={editTime} onChangeText={setEditTime} /></>
+                        <><Text style={styles.smallLabel}>SCHEDULED TIME · 12-HOUR OR 24-HOUR</Text>
+                        <ProtocolTimePicker label="Scheduled time" value={editTime} onChange={setEditTime} /></>
                       ) : null}
                       {editScheduleType === 'weekdays' ? (
                         <><Text style={styles.smallLabel}>DAYS OF THE WEEK</Text><View style={styles.dayRow}>{DAY_LABELS.map((label, day) => (
@@ -665,8 +666,8 @@ export default function ProtocolScreen() {
                         ))}</View></>
                       ) : null}
                       {editScheduleType === 'interval' || editScheduleType === 'cycle' ? (
-                        <><Text style={styles.smallLabel}>ANCHOR DATE · YYYY-MM-DD</Text>
-                        <TextInput style={styles.input} accessibilityLabel="Schedule start date" placeholder="YYYY-MM-DD" placeholderTextColor={colors.muted} value={editStartDate} onChangeText={setEditStartDate} autoCapitalize="none" />
+                        <><Text style={styles.smallLabel}>ANCHOR DATE</Text>
+                        <ProtocolDatePicker label="Schedule anchor date" value={editStartDate} onChange={setEditStartDate} />
                         <Text style={styles.scheduleHint}>Changing the anchor date will change where interval or cycle days fall.</Text></>
                       ) : null}
                       {editScheduleType === 'interval' ? (
