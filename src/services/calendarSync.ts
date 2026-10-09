@@ -106,6 +106,19 @@ export async function syncCalendarEvents(preview: CalendarPreviewEntry[]) {
   const permission = await Calendar.getCalendarPermissionsAsync();
   if (!permission.granted) throw new Error('Calendar permission was revoked. Reconnect it from Settings.');
 
+  const writableCalendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+  if (!writableCalendars.some((calendar) => calendar.id === connection.calendarId && calendar.allowsModifications)) {
+    throw new Error('The selected calendar is no longer writable. Check your calendar account and permissions before syncing.');
+  }
+  const previewKeys = new Set<string>();
+  for (const entry of preview) {
+    if (previewKeys.has(entry.key)) throw new Error('Duplicate scheduled event detected; no calendar changes were made.');
+    previewKeys.add(entry.key);
+    if (!Number.isFinite(entry.startDate.getTime()) || !Number.isFinite(entry.endDate.getTime()) || entry.endDate <= entry.startDate) {
+      throw new Error('Invalid scheduled time; no calendar changes were made.');
+    }
+  }
+
   // Each mapping is stored immediately after successful creation to make retries idempotent.
   const wanted = new Set(preview.map((event) => event.key));
   let added = 0;
