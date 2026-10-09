@@ -1,6 +1,7 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { AccessibilityInfo, ActivityIndicator, Alert, Animated, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Alert, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, layout, radius, spacing, type } from '@/theme';
 import { PulseMenu } from '@/components/PulseMenu';
 import { flushQuickLogOutbox, listDoseLogs, listRecentSites, listTodayItems, quickLog, type TimelineEntry, type TodayItem } from '@/services/pulse';
