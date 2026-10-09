@@ -79,10 +79,22 @@ export type CalendarPreviewEntry = {
   endDate: Date;
 };
 
-export function buildCalendarPreview(items: TodayItem[], protocols: Array<{ id: string; status: string; starts_on: string | null; ends_on: string | null }>, days = 14, now = new Date()): CalendarPreviewEntry[] {
+export function buildCalendarPreview(items: TodayItem[], protocols: Array<{ id: string; status: string; starts_on: string | null; ends_on: string | null }>, days = 90, now = new Date()): CalendarPreviewEntry[] {
   const protocolById = new Map(protocols.map((p) => [p.id, p]));
   const result: CalendarPreviewEntry[] = [];
-  const maxDays = Math.min(31, Math.max(1, days));
+  // Open-ended schedules use a rolling horizon; dated protocols include their final day.
+  const rollingDays = Math.min(730, Math.max(1, days));
+  let maxDays = rollingDays;
+  for (const protocol of protocols) {
+    if (protocol.status !== 'active' || !protocol.ends_on) continue;
+    if (!items.some((item) => item.protocol_id === protocol.id && item.active !== false && !item.archived_at)) continue;
+    const [year, month, day] = protocol.ends_on.split('-').map(Number);
+    const end = new Date(year, month - 1, day, 12);
+    if (!Number.isFinite(end.getTime())) continue;
+    const difference = (Date.UTC(end.getFullYear(), end.getMonth(), end.getDate()) -
+      Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000 + 1;
+    maxDays = Math.max(maxDays, Math.min(730, Math.round(difference)));
+  }
   for (let offset = 0; offset < maxDays; offset++) {
     const date = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12);
     date.setDate(date.getDate() + offset);
