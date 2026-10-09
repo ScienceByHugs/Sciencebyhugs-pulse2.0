@@ -4,8 +4,8 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { AccessibilityInfo, ActivityIndicator, Alert, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, layout, radius, spacing, type } from '@/theme';
 import { PulseMenu } from '@/components/PulseMenu';
-import { flushQuickLogOutbox, listDoseLogs, listRecentSites, listTodayItems, quickLog, type TimelineEntry, type TodayItem } from '@/services/pulse';
-import { isDueOnDate, localDayRange, nextScheduledTimeToday, scheduleTime } from '@/domain/schedule';
+import { flushQuickLogOutbox, listDoseLogs, listRecentSites, listTodayItems, listProtocolItems, listProtocols, quickLog, type TimelineEntry, type TodayItem } from '@/services/pulse';
+import { isDueOnDate, localDateKey, localDayRange, nextScheduledTimeToday, scheduleTime } from '@/domain/schedule';
 import { sitesForRoute, suggestSite } from '@/domain/sites';
 import { rescheduleReminders } from '@/lib/reminders';
 import { notifyLowStock } from '@/lib/lowStock';
@@ -27,6 +27,7 @@ export default function TodayScreen() {
   const entrance = useRef(new Animated.Value(0)).current;
   const firstName = String(session?.user.user_metadata?.first_name ?? session?.user.user_metadata?.full_name ?? '').trim().split(/\s+/)[0] || '';
   const [allItems, setAllItems] = useState<TodayItem[]>([]);
+  const [excludedItems, setExcludedItems] = useState<Array<{ id: string; name: string; reason: string }>>([]);
   const [todayLogs, setTodayLogs] = useState<TimelineEntry[]>([]);
   const [recentSites, setRecentSites] = useState<Record<string, string[]>>({});
   const [selectedSites, setSelectedSites] = useState<Record<string, string>>({});
@@ -38,7 +39,23 @@ export default function TodayScreen() {
   const load = useCallback(async () => {
     try {
       await flushQuickLogOutbox();
-      const [items, sites, logs] = await Promise.all([listTodayItems(), listRecentSites(), listDoseLogs(150)]);
+      const [items, sites, logs, tracked, protocols] = await Promise.all([listTodayItems(), listRecentSites(), listDoseLogs(150), listProtocolItems(), listProtocols()]);
+      const protocolById = new Map(protocols.map((protocol) => [protocol.id, protocol]));
+      const todayKey = localDateKey();
+      const eligibleIds = new Set(items.map((item) => item.id));
+      setExcludedItems(tracked.filter((item) => !item.archived_at && (!eligibleIds.has(item.id) || !isDueOnDate(item.schedule))).map((item) => {
+        const protocol = protocolById.get(item.protocol_id);
+        let reason = 'Not scheduled for today';
+        if (item.archived_at) reason = 'Archived';
+        else if (item.active === false) reason = 'Substance paused';
+        else if (!protocol) reason = 'Protocol not found';
+        else if (protocol.status !== 'active') reason = 'Protocol ' + protocol.status;
+        else if (protocol.starts_on && todayKey < protocol.starts_on) reason = 'Protocol has not started';
+        else if (protocol.ends_on && todayKey > protocol.ends_on) reason = 'Protocol has ended';
+        else if (!isDueOnDate(item.schedule)) reason = 'Not scheduled for today — check weekday, interval, or cycle start date';
+        else reason = 'Not available in active tracking';
+        return { id: item.id, name: item.name, reason };
+      }));
       setAllItems(items);
       setTodayLogs(logs);
       const dueItems = items.filter((item) => isDueOnDate(item.schedule));
@@ -191,6 +208,15 @@ export default function TodayScreen() {
           <View style={styles.emptyCard}>
             <Text style={styles.cardTitle}>Nothing scheduled today.</Text>
             <Text style={styles.detail}>{allItems.length ? 'Your active routine has no items due today.' : 'Create your first protocol in the Protocol tab to start tracking.'}</Text>
+          </View>
+        ) : null}
+
+        {!loading && excludedItems.length > 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.cardTitle}>Other tracked substances</Text>
+            <Text style={styles.detail}>These are in Protocol but not on today's due list. Select Edit Schedule or resume them in Protocol to adjust.</Text>
+            {excludedItems.map((item) => <Text key={item.id} style={styles.detail}>{item.name} · {item.reason}</Text>)}
+            <Pressable accessibilityRole="button" onPress={() => router.push('/(tabs)/protocol')}><Text style={styles.createActionText}>OPEN PROTOCOL →</Text></Pressable>
           </View>
         ) : null}
 
