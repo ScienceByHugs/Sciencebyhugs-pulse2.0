@@ -7,7 +7,7 @@ const cyan = '#42E5EE';
 const pad = (n: number) => String(n).padStart(2, '0');
 export function displayProtocolDate(iso: string | null | undefined) {
   if (!iso) return 'Not set';
-  const [y, m, d] = iso.split('-').map(Number);
+  const [y = 0, m = 0, d = 0] = iso.split('-').map(Number);
   const date = new Date(y, m - 1, d, 12);
   if (Number.isNaN(date.getTime())) return iso;
   return `${date.toLocaleDateString('en-US', { weekday: 'long' })}, ${pad(m)}/${pad(d)}/${y}`;
