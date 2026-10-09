@@ -88,7 +88,7 @@ export function buildCalendarPreview(items: TodayItem[], protocols: Array<{ id: 
   for (const protocol of protocols) {
     if (protocol.status !== 'active' || !protocol.ends_on) continue;
     if (!items.some((item) => item.protocol_id === protocol.id && item.active !== false && !item.archived_at)) continue;
-    const [year, month, day] = protocol.ends_on.split('-').map(Number);
+    const [year = 0, month = 0, day = 0] = protocol.ends_on.split('-').map(Number);
     const end = new Date(year, month - 1, day, 12);
     if (!Number.isFinite(end.getTime())) continue;
     const difference = (Date.UTC(end.getFullYear(), end.getMonth(), end.getDate()) -
