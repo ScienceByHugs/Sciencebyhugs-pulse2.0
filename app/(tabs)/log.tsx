@@ -19,6 +19,8 @@ export default function LogScreen() {
   const [selectedProtocol, setSelectedProtocol] = useState<string | null>(null);
   const [monthOffset, setMonthOffset] = useState(0);
   const [weekOffset, setWeekOffset] = useState(0);
+  const [yearOffset, setYearOffset] = useState(0);
+  const [selectedYearMonth, setSelectedYearMonth] = useState<number | null>(null);
   const [selectedWeekDay, setSelectedWeekDay] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month' | 'year' | 'cycle' | 'all'>('week');
@@ -105,9 +107,35 @@ export default function LogScreen() {
     return start && end ? `${start} — ${end}` : '';
   }, [weekDays]);
 
+  const yearValue = new Date().getFullYear() + yearOffset;
+  const yearAtlas = useMemo(() => {
+    const counts = Array.from({ length: 12 }, () => 0);
+    const activeDays = Array.from({ length: 12 }, () => new Set<string>());
+    for (const entry of entries) {
+      const date = new Date(entry.logged_at);
+      if (date.getFullYear() !== yearValue) continue;
+      const month = date.getMonth();
+      counts[month] = (counts[month] ?? 0) + 1;
+      activeDays[month]?.add(localDateKey(date));
+    }
+    return counts.map((count, index) => ({
+      index,
+      label: new Date(yearValue, index, 1).toLocaleDateString(undefined, { month: 'short' }).toUpperCase(),
+      count,
+      days: activeDays[index]?.size ?? 0
+    }));
+  }, [entries, yearValue]);
+  const maxYearCount = Math.max(1, ...yearAtlas.map((entry) => entry.count));
+
   const filteredEntries = useMemo(() => {
     const now = new Date();
     if (viewMode === 'all') return entries;
+    if (viewMode === 'year') {
+      return entries.filter((entry) => {
+        const date = new Date(entry.logged_at);
+        return date.getFullYear() === yearValue && (selectedYearMonth === null || date.getMonth() === selectedYearMonth);
+      });
+    }
     if (viewMode === 'week') {
       const start = weekDays[0]?.key;
       const end = weekDays[6]?.key;
@@ -125,9 +153,8 @@ export default function LogScreen() {
     if (viewMode === 'cycle') return cycleEntries;
     const start = new Date(now);
     start.setHours(0, 0, 0, 0);
-    if (viewMode === 'year') start.setMonth(0, 1);
     return entries.filter((entry) => new Date(entry.logged_at) >= start);
-  }, [entries, cycleEntries, viewMode, monthDate, selectedDay, weekDays, selectedWeekDay]);
+  }, [entries, cycleEntries, viewMode, monthDate, selectedDay, weekDays, selectedWeekDay, yearValue, selectedYearMonth]);
 
   const activity = useMemo(() => {
     const now = new Date();
@@ -169,7 +196,42 @@ export default function LogScreen() {
         <Text style={styles.title}>Timeline</Text>
         <Text style={styles.body}>A clear record of what you logged, when you logged it, and where.</Text>
 
-        <View style={styles.modeStrip}>{(['day', 'week', 'month', 'year', 'cycle', 'all'] as const).map((mode) => <Pressable accessibilityRole="button" accessibilityState={{ selected: viewMode === mode }} key={mode} style={[styles.modeButton, viewMode === mode && styles.modeButtonActive]} onPress={() => { setViewMode(mode); if (mode === 'month') setSelectedDay(null); if (mode === 'week') setSelectedWeekDay(null); }}><Text style={[styles.modeText, viewMode === mode && styles.modeTextActive]}>{mode.toUpperCase()}</Text></Pressable>)}</View>
+        <View style={styles.modeStrip}>{(['day', 'week', 'month', 'year', 'cycle', 'all'] as const).map((mode) => <Pressable accessibilityRole="button" accessibilityState={{ selected: viewMode === mode }} key={mode} style={[styles.modeButton, viewMode === mode && styles.modeButtonActive]} onPress={() => { setViewMode(mode); if (mode === 'month') setSelectedDay(null); if (mode === 'week') setSelectedWeekDay(null); if (mode === 'year') setSelectedYearMonth(null); }}><Text style={[styles.modeText, viewMode === mode && styles.modeTextActive]}>{mode.toUpperCase()}</Text></Pressable>)}</View>
+        {viewMode === 'year' ? (
+          <View style={styles.yearAtlasCard}>
+            <View style={styles.calendarHeader}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.signalEyebrow}>ANNUAL ATLAS / RECORDED ACTIVITY</Text>
+                <Text style={styles.yearAtlasHeading}>{yearValue}</Text>
+                <Text style={styles.yearAtlasSubheading}>A month-by-month view of your recorded history.</Text>
+              </View>
+              <Pressable accessibilityRole="button" accessibilityLabel="Previous year" style={styles.monthNav} onPress={() => { setYearOffset((value) => value - 1); setSelectedYearMonth(null); }}><Text style={styles.monthNavText}>‹</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Next year" style={styles.monthNav} onPress={() => { setYearOffset((value) => value + 1); setSelectedYearMonth(null); }}><Text style={styles.monthNavText}>›</Text></Pressable>
+            </View>
+            <View style={styles.yearAtlasGrid}>
+              {yearAtlas.map((month) => (
+                <Pressable
+                  key={month.index}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${month.label} ${yearValue}: ${month.count} events on ${month.days} days`}
+                  accessibilityState={{ selected: selectedYearMonth === month.index }}
+                  style={[styles.yearAtlasTile, selectedYearMonth === month.index && styles.yearAtlasTileSelected]}
+                  onPress={() => setSelectedYearMonth((current) => current === month.index ? null : month.index)}
+                >
+                  <View style={styles.yearAtlasTileTop}>
+                    <Text style={[styles.yearAtlasMonth, selectedYearMonth === month.index && styles.yearAtlasSelectedText]}>{month.label}</Text>
+                    <Text style={styles.yearAtlasCount}>{month.count}</Text>
+                  </View>
+                  <View style={styles.yearAtlasTrack}>
+                    <View style={[styles.yearAtlasFill, { width: `${(month.count / maxYearCount) * 100}%` as `${number}%` }]} />
+                  </View>
+                  <Text style={styles.yearAtlasDays}>{month.days} ACTIVE {month.days === 1 ? 'DAY' : 'DAYS'}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Text style={styles.calendarFoot}>{selectedYearMonth === null ? 'TAP A MONTH TO EXPLORE ITS ENTRIES' : `FILTERED TO ${yearAtlas[selectedYearMonth]?.label ?? ''} · TAP AGAIN TO SHOW YEAR`}</Text>
+          </View>
+        ) : null}
         {viewMode === 'week' ? (
           <View style={styles.weekGridCard}>
             <View style={styles.calendarHeader}>
@@ -305,6 +367,19 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   page: { padding: layout.pageInset, paddingBottom: layout.pageBottom },
   modeStrip: { flexDirection: 'row', gap: 5, marginBottom: 14 },
+  yearAtlasCard: { backgroundColor: colors.bgElevated, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.accentBorder, padding: spacing.md, marginBottom: spacing.md },
+  yearAtlasHeading: { color: colors.text, fontSize: 30, fontWeight: '900', lineHeight: 36, marginTop: 4, fontVariant: ['tabular-nums'] },
+  yearAtlasSubheading: { color: colors.muted, fontSize: 11, marginTop: 5, lineHeight: 16 },
+  yearAtlasGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between' },
+  yearAtlasTile: { width: '47.5%', borderRadius: radius.lg, backgroundColor: colors.panel, borderColor: colors.border, borderWidth: 1, padding: 12, gap: 10, minHeight: 93 },
+  yearAtlasTileSelected: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
+  yearAtlasTileTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+  yearAtlasMonth: { color: colors.muted, fontSize: 11, fontWeight: '900', letterSpacing: 1 },
+  yearAtlasSelectedText: { color: colors.accent },
+  yearAtlasCount: { color: colors.text, fontSize: 21, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  yearAtlasTrack: { height: 5, backgroundColor: colors.border, borderRadius: radius.pill, overflow: 'hidden' },
+  yearAtlasFill: { height: '100%', borderRadius: radius.pill, backgroundColor: colors.accent },
+  yearAtlasDays: { color: colors.subtle, fontSize: 9, fontWeight: '800', letterSpacing: 0.7 },
   weekGridCard: { backgroundColor: colors.bgElevated, borderRadius: radius.xl, borderColor: colors.accentBorder, borderWidth: 1, padding: spacing.md, marginBottom: spacing.md },
   weekGridTitle: { color: colors.text, fontSize: 21, fontWeight: '900', marginTop: 5 },
   weekGridRange: { color: colors.muted, fontSize: 11, marginTop: 5, fontVariant: ['tabular-nums'] },
