@@ -38,21 +38,28 @@ export function calculateSevenDayConsistency(items: TodayItem[], logs: TimelineE
 
 export function calculateSupplyForecast(items: TodayItem[]) {
   const forecasts = items.flatMap((item) => {
-    const inventory = item.inventory_containers?.find((container) => container.is_active);
-    if (!inventory || item.dose_amount <= 0) return [];
+    const containers = (item.inventory_containers ?? []).filter((container) =>
+      container.is_active && container.unit === item.dose_unit &&
+      Number.isFinite(Number(container.remaining_amount)) &&
+      Number.isFinite(Number(container.low_threshold))
+    );
+    if (!containers.length || item.dose_amount <= 0) return [];
 
-    const dosesRemaining = Math.floor(inventory.remaining_amount / item.dose_amount);
-    let projectedLowInDays: number | null = inventory.remaining_amount <= inventory.low_threshold ? 0 : null;
-    let remaining = inventory.remaining_amount;
+    const remainingInitial = containers.reduce((sum, container) => sum + Number(container.remaining_amount), 0);
+    const total = containers.reduce((sum, container) => sum + Number(container.total_amount), 0);
+    const threshold = containers.reduce((sum, container) => sum + Number(container.low_threshold), 0);
+    const dosesRemaining = Math.floor(remainingInitial / item.dose_amount);
+    let projectedLowInDays: number | null = remainingInitial <= threshold ? 0 : null;
+    let remaining = remainingInitial;
     const today = new Date();
 
     if (projectedLowInDays === null) {
       for (let offset = 0; offset <= 365; offset += 1) {
-        const day = new Date(today);
-        day.setDate(today.getDate() + offset);
+        const day = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12);
+        day.setDate(day.getDate() + offset);
         if (!isDueOnDate(item.schedule, day)) continue;
         remaining -= item.dose_amount;
-        if (remaining <= inventory.low_threshold) {
+        if (remaining <= threshold) {
           projectedLowInDays = offset;
           break;
         }
@@ -62,9 +69,9 @@ export function calculateSupplyForecast(items: TodayItem[]) {
     return [{
       itemId: item.id,
       name: item.name,
-      unit: inventory.unit,
-      remaining: inventory.remaining_amount,
-      total: inventory.total_amount,
+      unit: item.dose_unit,
+      remaining: remainingInitial,
+      total,
       dosesRemaining,
       projectedLowInDays
     }];
