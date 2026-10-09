@@ -30,9 +30,13 @@ function daysBetween(a: Date, b: Date) {
   return Math.round((aDay - bDay) / 86400000);
 }
 
-export function scheduleTime(schedule: Record<string, unknown>) {
+export function scheduleTime(schedule: Record<string, unknown>, date = new Date()) {
   const temp = schedule.temporary as TemporarySchedule | undefined;
-  if (temp?.time) return temp.time;
+  const key = localDateKey(date);
+  if (temp?.time && temp.startDate && temp.endDate &&
+      key >= temp.startDate && key <= temp.endDate && !temp.paused) {
+    return temp.time;
+  }
   return typeof schedule.time === 'string' ? schedule.time : undefined;
 }
 
