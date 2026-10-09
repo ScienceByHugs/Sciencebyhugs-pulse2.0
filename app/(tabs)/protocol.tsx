@@ -115,6 +115,14 @@ export default function ProtocolScreen() {
     }
   }
 
+  function confirmProtocolArchive(protocol: Protocol) {
+    if (busy) return;
+    Alert.alert('Archive protocol?', `Archive ${protocol.name}? It will stop appearing in active tracking. Its substance records and historical dose logs are preserved, and you can reactivate it later.`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Archive protocol', style: 'destructive', onPress: () => void setProtocolStatus(protocol.id, 'archived') }
+    ]);
+  }
+
   function startProtocolEdit(protocol: Protocol) {
     setEditingProtocolId(protocol.id);
     setEditProtocolName(protocol.name);
@@ -315,7 +323,7 @@ export default function ProtocolScreen() {
                   <Pressable style={styles.secondaryAction} disabled={busy} onPress={() => void setProtocolStatus(activeProtocol.id, 'paused')}>
                     <Text style={styles.secondaryActionText}>PAUSE</Text>
                   </Pressable>
-                  <Pressable style={styles.archiveAction} disabled={busy} onPress={() => void setProtocolStatus(activeProtocol.id, 'archived')}>
+                  <Pressable style={styles.archiveAction} disabled={busy} onPress={() => confirmProtocolArchive(activeProtocol)}>
                     <Text style={styles.archiveActionText}>ARCHIVE</Text>
                   </Pressable>
                 </View>
