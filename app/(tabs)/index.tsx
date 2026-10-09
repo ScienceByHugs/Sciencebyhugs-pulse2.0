@@ -7,6 +7,7 @@ import { flushQuickLogOutbox, listDoseLogs, listRecentSites, listTodayItems, qui
 import { isDueOnDate, localDayRange, nextScheduledTimeToday, scheduleTime } from '@/domain/schedule';
 import { sitesForRoute, suggestSite } from '@/domain/sites';
 import { rescheduleReminders } from '@/lib/reminders';
+import { notifyLowStock } from '@/lib/lowStock';
 import { updatePulseTodayWidget } from '@/lib/widgets';
 import { useAuth } from '@/providers/AuthProvider';
 import { calculateSevenDayConsistency } from '@/domain/insights';
@@ -43,6 +44,8 @@ export default function TodayScreen() {
       const nextWindow = nextScheduledTimeToday(dueItems.map((item) => item.schedule));
       const nextTime = nextWindow ? timeLabel(nextWindow) : dueItems.length ? 'Any time' : 'Open Pulse';
       await Promise.all([rescheduleReminders(items), updatePulseTodayWidget(dueItems.length, nextTime)]);
+      // Notification failures must never block dashboard data or quick logging.
+      try { await notifyLowStock(items); } catch { /* retry on next refresh */ }
       setRecentSites(sites);
       setSelectedSites((current) => {
         const next = { ...current };
