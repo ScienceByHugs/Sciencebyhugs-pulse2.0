@@ -5,7 +5,7 @@ import { AccessibilityInfo, ActivityIndicator, Alert, Animated, Pressable, Refre
 import { colors, layout, radius, spacing, type } from '@/theme';
 import { PulseMenu } from '@/components/PulseMenu';
 import { flushQuickLogOutbox, listDoseLogs, listRecentSites, listTodayItems, listProtocolItems, listProtocols, quickLog, type TimelineEntry, type TodayItem } from '@/services/pulse';
-import { isDueOnDate, localDayRange, nextScheduledTimeToday, scheduleTime } from '@/domain/schedule';
+import { isDueOnDate, localDateKey, localDayRange, nextScheduledTimeToday, scheduleTime } from '@/domain/schedule';
 import { sitesForRoute, suggestSite } from '@/domain/sites';
 import { rescheduleReminders } from '@/lib/reminders';
 import { notifyLowStock } from '@/lib/lowStock';
@@ -41,9 +41,9 @@ export default function TodayScreen() {
       await flushQuickLogOutbox();
       const [items, sites, logs, tracked, protocols] = await Promise.all([listTodayItems(), listRecentSites(), listDoseLogs(150), listProtocolItems(), listProtocols()]);
       const protocolById = new Map(protocols.map((protocol) => [protocol.id, protocol]));
-      const todayKey = new Date().toLocaleDateString('en-CA');
+      const todayKey = localDateKey();
       const eligibleIds = new Set(items.map((item) => item.id));
-      setExcludedItems(tracked.filter((item) => !item.archived_at && !eligibleIds.has(item.id) || eligibleIds.has(item.id) && !isDueOnDate(item.schedule)).map((item) => {
+      setExcludedItems(tracked.filter((item) => !item.archived_at && (!eligibleIds.has(item.id) || !isDueOnDate(item.schedule))).map((item) => {
         const protocol = protocolById.get(item.protocol_id);
         let reason = 'Not scheduled for today';
         if (item.archived_at) reason = 'Archived';
