@@ -34,7 +34,7 @@ export default function CalendarScreen() {
 
   useEffect(() => { void refresh(); }, [refresh]);
 
-  const preview = useMemo(() => buildCalendarPreview(items, protocols, 14), [items, protocols]);
+  const preview = useMemo(() => buildCalendarPreview(items, protocols, 90), [items, protocols]);
 
   async function chooseCalendarAccess() {
     if (busy) return;
@@ -159,9 +159,9 @@ export default function CalendarScreen() {
         ) : null}
 
         <View style={styles.card}>
-          <Text style={styles.eyebrow}>NEXT 14 DAYS / PREVIEW</Text>
+          <Text style={styles.eyebrow}>UPCOMING SCHEDULE / PREVIEW</Text>
           <Text style={styles.heading}>{preview.length} scheduled check-ins</Text>
-          <Text style={styles.detail}>Only active protocol items with valid clock times are included. As-needed items are excluded. Connecting syncs these entries immediately. Use Sync to refresh the next 14 days after schedule changes.</Text>
+          <Text style={styles.detail}>Only active protocol items with valid clock times are included. As-needed items are excluded. Sync covers the full remaining protocol end date (up to 2 years). Ongoing schedules sync the next 90 days. Refresh after changing a schedule.</Text>
           {preview.slice(0, 5).map((event) => (
             <View key={event.key} style={styles.previewRow}>
               <View style={styles.previewDot} />
