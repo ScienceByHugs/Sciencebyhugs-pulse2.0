@@ -16,6 +16,7 @@ export type TodayItem = {
   protocol_id: string;
   created_at?: string;
   active?: boolean;
+  archived_at?: string | null;
   name: string;
   category: string | null;
   route: string;
@@ -92,8 +93,21 @@ export async function setProtocolItemActive(itemId: string, active: boolean) {
   const { error } = await supabase.from('protocol_items')
     .update({ active })
     .eq('id', itemId)
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .is('archived_at', null);
   if (error) throw error;
+}
+
+export async function setProtocolItemArchived(itemId: string, archived: boolean) {
+  const userId = await currentUserId();
+  const { data, error } = await supabase.from('protocol_items')
+    .update({ archived_at: archived ? new Date().toISOString() : null, active: false })
+    .eq('id', itemId)
+    .eq('user_id', userId)
+    .select('id')
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error('Substance not found or you do not have permission to archive it.');
 }
 
 export async function updateProtocolItemDetails(itemId: string, name: string, category: string) {
@@ -135,7 +149,7 @@ export async function createProtocol(name: string) {
 export async function listProtocolItems(protocolId?: string) {
   let query = supabase
     .from('protocol_items')
-    .select('id,protocol_id,name,category,route,form,dose_amount,dose_unit,schedule,active,site_rotation_enabled,created_at,inventory_containers(id,remaining_amount,total_amount,unit,low_threshold,is_active)')
+    .select('id,protocol_id,name,category,route,form,dose_amount,dose_unit,schedule,active,archived_at,site_rotation_enabled,created_at,inventory_containers(id,remaining_amount,total_amount,unit,low_threshold,is_active)')
     .order('created_at', { ascending: false });
 
   if (protocolId) query = query.eq('protocol_id', protocolId);
@@ -150,6 +164,7 @@ export async function listTodayItems() {
     .from('protocol_items')
     .select('id,protocol_id,created_at,name,category,route,dose_amount,dose_unit,schedule,site_rotation_enabled,inventory_containers(id,remaining_amount,total_amount,unit,low_threshold,is_active),protocols!inner(status,starts_on,ends_on)')
     .eq('active', true)
+    .is('archived_at', null)
     .eq('protocols.status', 'active')
     .order('created_at', { ascending: true });
 
