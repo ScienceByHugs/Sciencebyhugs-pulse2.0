@@ -83,7 +83,7 @@ export function buildCalendarPreview(items: TodayItem[], protocols: Array<{ id: 
     date.setDate(date.getDate() + offset);
     const day = localDateKey(date);
     for (const item of items) {
-      if (item.active === false) continue;
+      if (item.active === false || item.archived_at) continue;
       const protocol = protocolById.get(item.protocol_id);
       if (!protocol || protocol.status !== 'active') continue;
       if ((protocol.starts_on && day < protocol.starts_on) || (protocol.ends_on && day > protocol.ends_on)) continue;

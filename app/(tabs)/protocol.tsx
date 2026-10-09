@@ -4,7 +4,7 @@ import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput
 import { colors, layout, radius, spacing, type } from '@/theme';
 import { PulseMenu } from '@/components/PulseMenu';
 import { SubstanceArtwork } from '@/components/SubstanceArtwork';
-import { createProtocol, createProtocolItem, listProtocolItems, listProtocols, setProtocolItemActive, updateProtocolItemDetails, updateProtocolItemSchedule, updateProtocolDetails, updateProtocolStatus, type TodayItem } from '@/services/pulse';
+import { createProtocol, createProtocolItem, listProtocolItems, listProtocols, setProtocolItemActive, setProtocolItemArchived, updateProtocolItemDetails, updateProtocolItemSchedule, updateProtocolDetails, updateProtocolStatus, type TodayItem } from '@/services/pulse';
 import { formatSchedule, isDueOnDate, localDateKey, scheduleTime } from '@/domain/schedule';
 
 type Protocol = { id: string; name: string; status: string; starts_on: string | null; ends_on: string | null };
@@ -54,6 +54,8 @@ export default function ProtocolScreen() {
 
   const activeProtocol = useMemo(() => protocols.find((p) => p.status === 'active' && p.id === selectedProtocolId) ?? protocols.find((p) => p.status === 'active'), [protocols, selectedProtocolId]);
   const activeItems = useMemo(() => activeProtocol ? items.filter((item) => item.protocol_id === activeProtocol.id) : [], [activeProtocol, items]);
+  const archivedItems = useMemo(() => activeItems.filter((item) => Boolean(item.archived_at)), [activeItems]);
+  const visibleItems = useMemo(() => activeItems.filter((item) => !item.archived_at), [activeItems]);
   const protocolMap = useMemo(() => {
     const formatter = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
     return Array.from({ length: 7 }, (_, offset) => {
@@ -62,7 +64,7 @@ export default function ProtocolScreen() {
       date.setDate(date.getDate() + offset);
       const key = localDateKey(date);
       const withinWindow = (!activeProtocol?.starts_on || key >= activeProtocol.starts_on) && (!activeProtocol?.ends_on || key <= activeProtocol.ends_on);
-      const due = withinWindow ? activeItems.filter((item) => item.active !== false && isDueOnDate(item.schedule, date)) : [];
+      const due = withinWindow ? visibleItems.filter((item) => item.active !== false && isDueOnDate(item.schedule, date)) : [];
       return {
         key: localDateKey(date),
         label: formatter.format(date).slice(0, 3).toUpperCase(),
@@ -72,7 +74,7 @@ export default function ProtocolScreen() {
         firstTime: due.map((item) => scheduleTime(item.schedule)).filter((value): value is string => Boolean(value)).sort()[0]
       };
     });
-  }, [activeItems, activeProtocol]);
+  }, [visibleItems, activeProtocol]);
 
   const load = useCallback(async () => {
     try {
@@ -151,6 +153,29 @@ export default function ProtocolScreen() {
       await load();
     } catch (error) {
       Alert.alert('Could not update substance', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function confirmArchive(item: TodayItem) {
+    if (busy) return;
+    Alert.alert('Archive substance?', `Archive ${item.name}? It will leave active tracking and reminders. Existing dose history and inventory records are preserved. You can restore it later.`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Archive', style: 'destructive', onPress: () => void archiveItem(item.id, true) }
+    ]);
+  }
+
+  async function archiveItem(itemId: string, archived: boolean) {
+    if (busy) return;
+    try {
+      setBusy(true);
+      await setProtocolItemArchived(itemId, archived);
+      if (editingItemId === itemId) setEditingItemId(null);
+      if (editingScheduleId === itemId) setEditingScheduleId(null);
+      await load();
+    } catch (error) {
+      Alert.alert(archived ? 'Could not archive substance' : 'Could not restore substance', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setBusy(false);
     }
@@ -296,7 +321,7 @@ export default function ProtocolScreen() {
               <View style={styles.card}>
                 <Text style={styles.smallLabel}>ACTIVE PROTOCOL</Text>
                 <Text style={styles.cardTitle}>{activeProtocol.name}</Text>
-                <Text style={styles.cardDetail}>{activeItems.length} tracked items</Text>
+                <Text style={styles.cardDetail}>{visibleItems.length} tracked items</Text>
                 <View style={styles.protocolDateBand}>
                   <View style={styles.protocolDateColumn}><Text style={styles.smallLabel}>START DATE</Text><Text style={styles.protocolDateText}>{activeProtocol.starts_on || 'NOT SET'}</Text></View>
                   <View style={styles.protocolDateColumn}><Text style={styles.smallLabel}>END DATE</Text><Text style={styles.protocolDateText}>{activeProtocol.ends_on || 'OPEN-ENDED'}</Text></View>
@@ -349,7 +374,7 @@ export default function ProtocolScreen() {
               </View>
             ))}
 
-            {activeProtocol && activeItems.length ? (
+            {activeProtocol && visibleItems.length ? (
               <View style={styles.mapCard}>
                 <View style={styles.mapHeader}>
                   <View style={{ flex: 1 }}>
@@ -498,12 +523,12 @@ export default function ProtocolScreen() {
                 <View>
                   <Text style={styles.libraryKicker}>SCIENCE BY HUGS · LIBRARY</Text>
                   <Text style={styles.libraryTitle}>Your substances</Text>
-                  <Text style={styles.librarySubtitle}>{activeItems.filter((item) => item.active !== false).length} tracking · {activeItems.filter((item) => item.active === false).length} paused</Text>
+                  <Text style={styles.librarySubtitle}>{visibleItems.filter((item) => item.active !== false).length} tracking · {visibleItems.filter((item) => item.active === false).length} paused</Text>
                 </View>
                 <Text style={styles.libraryIndex}>SBH / 03</Text>
               </View>
             ) : null}
-            {activeProtocol ? activeItems.map((item) => {
+            {activeProtocol ? visibleItems.map((item) => {
               const inventoryItem = item.inventory_containers?.find((container) => container.is_active);
               const isLow = inventoryItem ? inventoryItem.remaining_amount <= inventoryItem.low_threshold : false;
               const fraction = inventoryItem && inventoryItem.total_amount > 0
@@ -547,6 +572,7 @@ export default function ProtocolScreen() {
                       <Text style={styles.signaturePauseText}>{item.active === false ? 'RESUME' : 'PAUSE'}</Text>
                     </Pressable>
                   </View>
+                  <Pressable accessibilityRole="button" accessibilityLabel={`Archive ${item.name}`} disabled={busy} style={styles.archiveAction} onPress={() => confirmArchive(item)}><Text style={styles.archiveActionText}>ARCHIVE SUBSTANCE · PRESERVE HISTORY</Text></Pressable>
                   <Pressable accessibilityRole="button" accessibilityLabel={`Edit schedule for ${item.name}`} style={styles.scheduleEditTrigger} disabled={busy} onPress={() => beginScheduleEdit(item)}>
                     <Text style={styles.scheduleEditTriggerText}>EDIT SCHEDULE  ↗</Text>
                     <Text style={styles.scheduleEditSubtext}>Adjust the tracking pattern without removing history</Text>
@@ -607,6 +633,23 @@ export default function ProtocolScreen() {
             }) : null}
           </>
         )}
+        {activeProtocol && archivedItems.length > 0 ? (
+          <View style={styles.card}>
+            <Text style={styles.smallLabel}>ARCHIVED SUBSTANCES · {archivedItems.length}</Text>
+            <Text style={styles.cardDetail}>Hidden from active tracking. History is retained. Restore a substance to make it available as paused.</Text>
+            {archivedItems.map((item) => (
+              <View style={styles.protocolRow} key={item.id}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.itemTitle}>{item.name}</Text>
+                  <Text style={styles.cardDetail}>{item.category || 'Other'} · Archived</Text>
+                </View>
+                <Pressable accessibilityRole="button" accessibilityLabel={`Restore ${item.name}`} disabled={busy} style={styles.activateButton} onPress={() => void archiveItem(item.id, false)}>
+                  <Text style={styles.activateText}>RESTORE</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
