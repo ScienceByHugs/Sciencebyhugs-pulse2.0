@@ -4,7 +4,7 @@ import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } fr
 import { colors, layout, radius, spacing, type } from '@/theme';
 import { PulseMenu } from '@/components/PulseMenu';
 import { localDateKey } from '@/domain/schedule';
-import { listDoseLogs, listProtocols, listProtocolItems, type TimelineEntry, type TodayItem } from '@/services/pulse';
+import { listTimelineHistory, listProtocols, listProtocolItems, type TimelineEntry, type TodayItem } from '@/services/pulse';
 
 type TrackedProtocol = { id: string; name: string; status: string; starts_on: string | null; ends_on: string | null };
 
@@ -14,6 +14,7 @@ function dayKey(value: string) {
 
 export default function LogScreen() {
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
+  const [historyTruncated, setHistoryTruncated] = useState(false);
   const [protocols, setProtocols] = useState<TrackedProtocol[]>([]);
   const [protocolItems, setProtocolItems] = useState<TodayItem[]>([]);
   const [selectedProtocol, setSelectedProtocol] = useState<string | null>(null);
@@ -27,8 +28,9 @@ export default function LogScreen() {
 
   const load = useCallback(async () => {
     try {
-      const [logs, nextProtocols, nextItems] = await Promise.all([listDoseLogs(1000), listProtocols(), listProtocolItems()]);
-      setEntries(logs);
+      const [history, nextProtocols, nextItems] = await Promise.all([listTimelineHistory(), listProtocols(), listProtocolItems()]);
+      setEntries(history.entries);
+      setHistoryTruncated(history.truncated);
       setProtocols(nextProtocols);
       setProtocolItems(nextItems);
       setSelectedProtocol((previous) => previous && nextProtocols.some((p) => p.id === previous) ? previous : (nextProtocols[0]?.id ?? null));
@@ -195,6 +197,12 @@ export default function LogScreen() {
         <Text style={styles.eyebrow}>YOUR HISTORY</Text>
         <Text style={styles.title}>Timeline</Text>
         <Text style={styles.body}>A clear record of what you logged, when you logged it, and where.</Text>
+        {historyTruncated ? (
+          <View style={styles.historyNotice}>
+            <Text style={styles.historyNoticeTitle}>OLDER RECORDS MAY BE MISSING</Text>
+            <Text style={styles.historyNoticeBody}>Showing the most recent 10,000 entries. Earlier dates may be incomplete.</Text>
+          </View>
+        ) : null}
 
         <View style={styles.modeStrip}>{(['day', 'week', 'month', 'year', 'cycle', 'all'] as const).map((mode) => <Pressable accessibilityRole="button" accessibilityState={{ selected: viewMode === mode }} key={mode} style={[styles.modeButton, viewMode === mode && styles.modeButtonActive]} onPress={() => { setViewMode(mode); if (mode === 'month') setSelectedDay(null); if (mode === 'week') setSelectedWeekDay(null); if (mode === 'year') setSelectedYearMonth(null); }}><Text style={[styles.modeText, viewMode === mode && styles.modeTextActive]}>{mode.toUpperCase()}</Text></Pressable>)}</View>
         {viewMode === 'year' ? (
@@ -366,6 +374,9 @@ export default function LogScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   page: { padding: layout.pageInset, paddingBottom: layout.pageBottom },
+  historyNotice: { backgroundColor: colors.bgElevated, padding: spacing.md, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.warning, borderRadius: radius.lg, gap: 5 },
+  historyNoticeTitle: { color: colors.warning, fontSize: 10, fontWeight: '900', letterSpacing: .9 },
+  historyNoticeBody: { color: colors.muted, fontSize: 12, lineHeight: 18 },
   modeStrip: { flexDirection: 'row', gap: 5, marginBottom: 14 },
   yearAtlasCard: { backgroundColor: colors.bgElevated, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.accentBorder, padding: spacing.md, marginBottom: spacing.md },
   yearAtlasHeading: { color: colors.text, fontSize: 30, fontWeight: '900', lineHeight: 36, marginTop: 4, fontVariant: ['tabular-nums'] },
