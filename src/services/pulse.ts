@@ -119,11 +119,14 @@ export async function updateProtocolItemDetails(itemId: string, name: string, ca
   const userId = await currentUserId();
   const cleaned = name.trim();
   if (!cleaned || cleaned.length > 100) throw new Error('Enter a substance name up to 100 characters.');
-  const { error } = await supabase.from('protocol_items')
+  const { data, error } = await supabase.from('protocol_items')
     .update({ name: cleaned, category: category.trim() || null })
     .eq('id', itemId)
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .select('id')
+    .maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error('Substance was not updated. Check your permissions and try again.');
 }
 
 export async function updateProtocolItemSchedule(itemId: string, schedule: Record<string, unknown>) {
