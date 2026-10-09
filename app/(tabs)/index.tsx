@@ -44,7 +44,8 @@ export default function TodayScreen() {
       const nextWindow = nextScheduledTimeToday(dueItems.map((item) => item.schedule));
       const nextTime = nextWindow ? timeLabel(nextWindow) : dueItems.length ? 'Any time' : 'Open Pulse';
       await Promise.all([rescheduleReminders(items), updatePulseTodayWidget(dueItems.length, nextTime)]);
-      await notifyLowStock(items);
+      // Notification failures must never block dashboard data or quick logging.
+      try { await notifyLowStock(items); } catch { /* retry on next refresh */ }
       setRecentSites(sites);
       setSelectedSites((current) => {
         const next = { ...current };
