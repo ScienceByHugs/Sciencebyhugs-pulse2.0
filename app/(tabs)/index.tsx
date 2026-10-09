@@ -255,7 +255,8 @@ export default function TodayScreen() {
           <Text style={styles.consistencyValue}>{consistency.due ? `${consistency.completed}/${consistency.due}` : '—'}</Text>
           <Text style={styles.consistencyCaption}>{consistency.due ? 'Scheduled occurrences recorded' : 'No scheduled occurrences in this period'}</Text>
         </View>
-        <View style={styles.dashboardSignals}>          <View style={styles.daySignalCard}>
+        <View style={styles.dashboardSignals}>
+          <View style={styles.daySignalCard}>
             <View style={styles.daySignalHeader}>
               <View>
                 <Text style={styles.briefEyebrow}>DAY SIGNAL</Text>
