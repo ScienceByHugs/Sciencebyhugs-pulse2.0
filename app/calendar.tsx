@@ -1,0 +1,208 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { colors, layout, radius, spacing, type } from '@/theme';
+import { PulseMenu } from '@/components/PulseMenu';
+import { listProtocolItems, listProtocols, type TodayItem } from '@/services/pulse';
+import {
+  buildCalendarPreview, connectCalendar, disconnectCalendar, readCalendarConnection,
+  requestWritableCalendars, setCalendarTitlePrivacy, syncCalendarEvents,
+  type CalendarConnection, type WritableCalendar
+} from '@/services/calendarSync';
+
+type TrackedProtocol = { id: string; name: string; status: string; starts_on: string | null; ends_on: string | null };
+
+export default function CalendarScreen() {
+  const router = useRouter();
+  const [items, setItems] = useState<TodayItem[]>([]);
+  const [protocols, setProtocols] = useState<TrackedProtocol[]>([]);
+  const [connection, setConnection] = useState<CalendarConnection | null>(null);
+  const [calendars, setCalendars] = useState<WritableCalendar[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  const refresh = useCallback(async () => {
+    try {
+      const [nextItems, nextProtocols, nextConnection] = await Promise.all([listProtocolItems(), listProtocols(), readCalendarConnection()]);
+      setItems(nextItems);
+      setProtocols(nextProtocols);
+      setConnection(nextConnection);
+    } catch (error) {
+      Alert.alert('Calendar setup could not load', error instanceof Error ? error.message : String(error));
+    }
+  }, []);
+
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  const preview = useMemo(() => buildCalendarPreview(items, protocols, 14), [items, protocols]);
+
+  async function chooseCalendarAccess() {
+    if (busy) return;
+    try {
+      setBusy(true);
+      const next = await requestWritableCalendars();
+      setCalendars(next);
+      if (!next.length) Alert.alert('No writable calendars', 'Add a calendar account in device Settings, then try again.');
+    } catch (error) {
+      Alert.alert('Calendar permission or native build needed', error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function selectCalendar(calendar: WritableCalendar) {
+    if (busy) return;
+    try {
+      setBusy(true);
+      setConnection(await connectCalendar(calendar));
+      setCalendars([]);
+    } catch (error) {
+      Alert.alert('Unable to connect calendar', error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function setNames(includeNames: boolean) {
+    if (busy) return;
+    try {
+      setBusy(true);
+      setConnection(await setCalendarTitlePrivacy(includeNames));
+    } catch (error) {
+      Alert.alert('Unable to update privacy', error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runSync() {
+    if (busy) return;
+    try {
+      setBusy(true);
+      const result = await syncCalendarEvents(preview);
+      setConnection(await readCalendarConnection());
+      Alert.alert('Calendar updated', `${result.added} added · ${result.updated} updated · ${result.removed} removed.`);
+    } catch (error) {
+      Alert.alert('Calendar sync stopped', `${error instanceof Error ? error.message : String(error)}\n\nPreviously saved entries are retained so a retry cannot silently create duplicates.`);
+      setConnection(await readCalendarConnection());
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function confirmDisconnect() {
+    if (busy) return;
+    Alert.alert('Disconnect calendar', 'Pulse will remove the events it created before disconnecting. Your other calendar events will not be changed.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove Pulse entries & disconnect', style: 'destructive', onPress: () => { void finishDisconnect(); } }
+    ]);
+  }
+
+  async function finishDisconnect() {
+    try {
+      setBusy(true);
+      await disconnectCalendar(true);
+      setConnection(null);
+      setCalendars([]);
+    } catch (error) {
+      Alert.alert('Could not disconnect safely', error instanceof Error ? error.message : String(error));
+      setConnection(await readCalendarConnection());
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
+        <PulseMenu />
+        <Text style={styles.kicker}>PULSE / CONNECTED TOOLS</Text>
+        <Text style={styles.title}>Calendar</Text>
+        <Text style={styles.body}>Keep your schedule within reach. You choose if and when Pulse writes to your device calendar.</Text>
+
+        <View style={styles.card}>
+          <Text style={styles.eyebrow}>YOUR CONNECTION</Text>
+          <Text style={styles.heading}>{connection ? connection.calendarName : 'Not connected'}</Text>
+          <Text style={styles.detail}>{connection ? `${Object.keys(connection.events).length} Pulse-created entries currently tracked on this device.` : 'Calendar access is never requested until you explicitly connect.'}</Text>
+          {!connection ? (
+            <Pressable accessibilityRole="button" disabled={busy} style={styles.primary} onPress={() => void chooseCalendarAccess()}><Text style={styles.primaryText}>{busy ? 'CONNECTING…' : 'CHOOSE MY CALENDAR'}</Text></Pressable>
+          ) : (
+            <Pressable accessibilityRole="button" disabled={busy} style={styles.secondary} onPress={confirmDisconnect}><Text style={styles.secondaryText}>DISCONNECT CALENDAR</Text></Pressable>
+          )}
+        </View>
+
+        {calendars.length && !connection ? (
+          <View style={styles.card}>
+            <Text style={styles.eyebrow}>WRITABLE CALENDARS ON THIS DEVICE</Text>
+            {calendars.map((calendar) => <Pressable accessibilityRole="button" key={calendar.id} style={styles.choice} onPress={() => void selectCalendar(calendar)} disabled={busy}><Text style={styles.choiceText}>{calendar.title}</Text><Text style={styles.choiceArrow}>↗</Text></Pressable>)}
+          </View>
+        ) : null}
+
+        {connection ? (
+          <View style={styles.card}>
+            <Text style={styles.eyebrow}>PRIVACY FIRST</Text>
+            <Text style={styles.heading}>Event titles</Text>
+            <Text style={styles.detail}>Generic names are used by default so the lock screen and other calendar apps don't reveal substance names.</Text>
+            <View style={styles.options}>
+              <Pressable accessibilityRole="button" accessibilityState={{ selected: !connection.includeNames }} style={[styles.option, !connection.includeNames && styles.optionActive]} disabled={busy} onPress={() => void setNames(false)}><Text style={[styles.optionText, !connection.includeNames && styles.selectedText]}>Private · Generic</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityState={{ selected: connection.includeNames }} style={[styles.option, connection.includeNames && styles.optionActive]} disabled={busy} onPress={() => void setNames(true)}><Text style={[styles.optionText, connection.includeNames && styles.selectedText]}>Include names</Text></Pressable>
+            </View>
+          </View>
+        ) : null}
+
+        <View style={styles.card}>
+          <Text style={styles.eyebrow}>NEXT 14 DAYS / PREVIEW</Text>
+          <Text style={styles.heading}>{preview.length} scheduled check-ins</Text>
+          <Text style={styles.detail}>Only active protocol items with valid clock times are included. As-needed items are excluded. This is a one-time rolling sync, not background synchronization.</Text>
+          {preview.slice(0, 5).map((event) => (
+            <View key={event.key} style={styles.previewRow}>
+              <View style={styles.previewDot} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.previewTitle}>{connection?.includeNames ? event.name : 'Scheduled check-in'}</Text>
+                <Text style={styles.previewTime}>{event.startDate.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</Text>
+              </View>
+            </View>
+          ))}
+          {preview.length > 5 ? <Text style={styles.moreText}>+ {preview.length - 5} MORE SCHEDULED</Text> : null}
+          {connection ? (
+            <Pressable accessibilityRole="button" disabled={busy} style={styles.primary} onPress={() => void runSync()}><Text style={styles.primaryText}>{busy ? 'SYNCING…' : 'SYNC THESE ENTRIES'}</Text></Pressable>
+          ) : (
+            <Text style={styles.footnote}>Connect a calendar above to enable syncing.</Text>
+          )}
+        </View>
+        <Pressable accessibilityRole="button" style={styles.back} onPress={() => router.back()}><Text style={styles.backText}>← BACK TO PULSE</Text></Pressable>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.bg },
+  page: { padding: layout.pageInset, paddingBottom: layout.pageBottom },
+  kicker: { color: colors.accent, fontWeight: '900', letterSpacing: 1.6, fontSize: type.eyebrow, marginTop: spacing.md },
+  title: { color: colors.text, fontSize: type.title, fontWeight: '900', letterSpacing: -1, marginTop: spacing.sm },
+  body: { color: colors.muted, fontSize: type.body, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.lg },
+  card: { padding: layout.cardInset, borderWidth: 1, borderColor: colors.accentBorder, backgroundColor: colors.panel, borderRadius: radius.xl, gap: spacing.md, marginBottom: spacing.md },
+  eyebrow: { color: colors.accent, fontSize: 10, fontWeight: '900', letterSpacing: 1.3 },
+  heading: { color: colors.text, fontSize: 19, fontWeight: '900' },
+  detail: { color: colors.muted, fontSize: 12, lineHeight: 18 },
+  primary: { minHeight: 49, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12, backgroundColor: colors.accent, borderRadius: radius.md },
+  primaryText: { color: colors.bg, fontWeight: '900', letterSpacing: .6, fontSize: 12 },
+  secondary: { minHeight: 48, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md },
+  secondaryText: { color: colors.muted, fontWeight: '900', fontSize: 11 },
+  choice: { flexDirection: 'row', alignItems: 'center', minHeight: 49, borderTopWidth: 1, borderTopColor: colors.border },
+  choiceText: { color: colors.text, flex: 1, fontWeight: '700', fontSize: 13 },
+  choiceArrow: { color: colors.accent, fontSize: 19 },
+  options: { flexDirection: 'row', gap: 8 },
+  option: { flex: 1, minHeight: 48, borderColor: colors.border, borderWidth: 1, backgroundColor: colors.bgElevated, borderRadius: radius.md, justifyContent: 'center', alignItems: 'center' },
+  optionActive: { borderColor: colors.accentBorder, backgroundColor: colors.accentSoft },
+  optionText: { fontSize: 12, fontWeight: '800', color: colors.muted },
+  selectedText: { color: colors.accent },
+  previewRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border },
+  previewDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
+  previewTitle: { color: colors.text, fontSize: 13, fontWeight: '800' },
+  previewTime: { color: colors.muted, fontSize: 11, marginTop: 3 },
+  moreText: { color: colors.subtle, fontSize: 10, fontWeight: '800' },
+  footnote: { color: colors.muted, fontSize: 11 },
+  back: { minHeight: 44, justifyContent: 'center', marginTop: 10 },
+  backText: { color: colors.accent, fontSize: 11, fontWeight: '900', letterSpacing: 1 }
+});
