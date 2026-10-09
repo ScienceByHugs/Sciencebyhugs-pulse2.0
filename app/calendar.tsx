@@ -91,17 +91,16 @@ export default function CalendarScreen() {
 
   function confirmDisconnect() {
     if (busy) return;
-    Alert.alert('Disconnect calendar', 'Choose what to do with entries Pulse previously created.', [
+    Alert.alert('Disconnect calendar', 'Pulse will remove the events it created before disconnecting. Your other calendar events will not be changed.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Keep existing entries', onPress: () => { void finishDisconnect(false); } },
-      { text: 'Remove Pulse entries', style: 'destructive', onPress: () => { void finishDisconnect(true); } }
+      { text: 'Remove Pulse entries & disconnect', style: 'destructive', onPress: () => { void finishDisconnect(); } }
     ]);
   }
 
-  async function finishDisconnect(remove: boolean) {
+  async function finishDisconnect() {
     try {
       setBusy(true);
-      await disconnectCalendar(remove);
+      await disconnectCalendar(true);
       setConnection(null);
       setCalendars([]);
     } catch (error) {
