@@ -31,8 +31,10 @@ begin
   select * into v_log from public.dose_logs
   where user_id = v_uid and client_event_id = p_client_event_id;
   if found then
-    if v_log.protocol_item_id <> p_protocol_item_id or v_log.amount <> p_amount
-       or lower(v_log.unit) <> lower(p_unit) then
+    if v_log.protocol_item_id IS DISTINCT FROM p_protocol_item_id
+       or v_log.amount IS DISTINCT FROM p_amount
+       or lower(v_log.unit) IS DISTINCT FROM lower(p_unit)
+       or v_log.inventory_container_id IS DISTINCT FROM p_inventory_container_id then
       raise exception 'Client event ID conflicts with an existing dose';
     end if;
     return v_log;
