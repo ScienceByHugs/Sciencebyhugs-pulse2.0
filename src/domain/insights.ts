@@ -1,37 +1,46 @@
 import { isDueOnDate, localDateKey } from '@/domain/schedule';
 import type { TimelineEntry, TodayItem } from '@/services/pulse';
 
-export function calculateSevenDayConsistency(items: TodayItem[], logs: TimelineEntry[]) {
+export function calculateSevenDayConsistency(items: TodayItem[], logs: TimelineEntry[], now = new Date()) {
+  // Compare exact local calendar dates, not elapsed milliseconds (DST-safe).
   const due = new Set<string>();
   const completed = new Set<string>();
-  const today = new Date();
+  const skipped = new Set<string>();
+  const windowKeys = new Set<string>();
 
   for (let offset = 0; offset < 7; offset += 1) {
-    const day = new Date(today);
-    day.setDate(today.getDate() - offset);
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12);
+    day.setDate(day.getDate() - offset);
     const key = localDateKey(day);
-
+    windowKeys.add(key);
     for (const item of items) {
-      // A newly tracked item cannot be due before it was created.
+      if (item.active === false || item.archived_at) continue;
       if (item.created_at && key < localDateKey(new Date(item.created_at))) continue;
       if (isDueOnDate(item.schedule, day)) due.add(`${item.id}:${key}`);
     }
   }
 
   for (const log of logs) {
-    if (log.status !== 'completed' || !log.protocol_item_id) continue;
-    const day = new Date(log.logged_at);
-    const ageMs = today.getTime() - day.getTime();
-    if (ageMs < 0 || ageMs > 8 * 86400000) continue;
-    completed.add(`${log.protocol_item_id}:${localDateKey(day)}`);
+    if (!log.protocol_item_id) continue;
+    const dayKey = localDateKey(new Date(log.logged_at));
+    if (!windowKeys.has(dayKey)) continue;
+    const key = `${log.protocol_item_id}:${dayKey}`;
+    if (log.status === 'completed') completed.add(key);
+    if (log.status === 'skipped') skipped.add(key);
   }
 
   let completedDue = 0;
-  for (const key of due) if (completed.has(key)) completedDue += 1;
+  let skippedDue = 0;
+  for (const key of due) {
+    if (completed.has(key)) completedDue += 1;
+    else if (skipped.has(key)) skippedDue += 1;
+  }
 
   return {
     due: due.size,
     completed: completedDue,
+    skipped: skippedDue,
+    missed: Math.max(0, due.size - completedDue - skippedDue),
     percent: due.size ? Math.round((completedDue / due.size) * 100) : 100
   };
 }
