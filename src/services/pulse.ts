@@ -55,12 +55,17 @@ export async function listProtocols() {
 }
 
 export async function updateProtocolStatus(protocolId: string, status: 'active' | 'paused' | 'archived') {
-  const { error } = await supabase
+  const userId = await currentUserId();
+  const { data, error } = await supabase
     .from('protocols')
     .update({ status, updated_at: new Date().toISOString() })
-    .eq('id', protocolId);
+    .eq('id', protocolId)
+    .eq('user_id', userId)
+    .select('id')
+    .maybeSingle();
 
   if (error) throw error;
+  if (!data) throw new Error('Protocol not found or you do not have permission to change it.');
 }
 
 function validCalendarDate(value: string) {
@@ -122,9 +127,11 @@ export async function updateProtocolItemSchedule(itemId: string, schedule: Recor
 
 export async function createProtocol(name: string) {
   const userId = await currentUserId();
+  const cleanName = name.trim();
+  if (!cleanName || cleanName.length > 100) throw new Error('Use a protocol name of 1–100 characters.');
   const { data, error } = await supabase
     .from('protocols')
-    .insert({ user_id: userId, name: name.trim() })
+    .insert({ user_id: userId, name: cleanName })
     .select()
     .single();
 
