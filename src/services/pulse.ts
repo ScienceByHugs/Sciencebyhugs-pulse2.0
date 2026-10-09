@@ -115,12 +115,15 @@ export async function setProtocolItemArchived(itemId: string, archived: boolean)
   if (!data) throw new Error('Substance not found or you do not have permission to archive it.');
 }
 
-export async function updateProtocolItemDetails(itemId: string, name: string, category: string) {
+export async function updateProtocolItemDetails(itemId: string, name: string, category: string, doseAmount: number, doseUnit: string, route: string) {
   const userId = await currentUserId();
   const cleaned = name.trim();
   if (!cleaned || cleaned.length > 100) throw new Error('Enter a substance name up to 100 characters.');
+  if (!Number.isFinite(doseAmount) || doseAmount <= 0) throw new Error('Enter a positive dose amount.');
+  if (!doseUnit.trim() || doseUnit.trim().length > 30) throw new Error('Enter a valid dose unit.');
+  if (!['subcutaneous', 'intramuscular', 'oral', 'topical', 'other'].includes(route)) throw new Error('Choose a valid route.');
   const { data, error } = await supabase.from('protocol_items')
-    .update({ name: cleaned, category: category.trim() || null })
+    .update({ name: cleaned, category: category.trim() || null, dose_amount: doseAmount, dose_unit: doseUnit.trim(), route })
     .eq('id', itemId)
     .eq('user_id', userId)
     .select('id')
