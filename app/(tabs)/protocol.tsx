@@ -4,6 +4,7 @@ import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput
 import { colors, layout, radius, spacing, type } from '@/theme';
 import { PulseMenu } from '@/components/PulseMenu';
 import { SubstanceArtwork } from '@/components/SubstanceArtwork';
+import { ProtocolDatePicker, ProtocolTimePicker, displayProtocolDate } from '@/components/ProtocolPickers';
 import { addInventoryContainer, correctInventoryRemaining, createProtocol, createProtocolItem, listProtocolItems, listProtocols, setProtocolItemActive, setProtocolItemArchived, updateProtocolItemDetails, updateProtocolItemSchedule, updateProtocolDetails, updateProtocolStatus, type TodayItem } from '@/services/pulse';
 import { formatSchedule, isDueOnDate, localDateKey, scheduleTime } from '@/domain/schedule';
 
@@ -25,6 +26,9 @@ export default function ProtocolScreen() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editItemName, setEditItemName] = useState('');
   const [editCategory, setEditCategory] = useState('Other');
+  const [editDose, setEditDose] = useState('');
+  const [editUnit, setEditUnit] = useState('mg');
+  const [editRoute, setEditRoute] = useState<(typeof ROUTES)[number]>('subcutaneous');
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [editScheduleType, setEditScheduleType] = useState<'daily' | 'weekdays' | 'interval' | 'cycle' | 'as_needed'>('daily');
   const [editTime, setEditTime] = useState('');
@@ -215,13 +219,16 @@ export default function ProtocolScreen() {
     setEditingItemId(item.id);
     setEditItemName(item.name);
     setEditCategory(item.category || 'Other');
+    setEditDose(String(item.dose_amount));
+    setEditUnit(item.dose_unit);
+    setEditRoute(item.route as (typeof ROUTES)[number]);
   }
 
   async function saveItemEdit() {
     if (!editingItemId) return;
     try {
       setBusy(true);
-      await updateProtocolItemDetails(editingItemId, editItemName, editCategory);
+      await updateProtocolItemDetails(editingItemId, editItemName, editCategory, Number(editDose), editUnit, editRoute);
       setEditingItemId(null);
       await load();
     } catch (error) {
@@ -353,8 +360,8 @@ export default function ProtocolScreen() {
                 <Text style={styles.cardTitle}>{activeProtocol.name}</Text>
                 <Text style={styles.cardDetail}>{visibleItems.length} tracked items</Text>
                 <View style={styles.protocolDateBand}>
-                  <View style={styles.protocolDateColumn}><Text style={styles.smallLabel}>START DATE</Text><Text style={styles.protocolDateText}>{activeProtocol.starts_on || 'NOT SET'}</Text></View>
-                  <View style={styles.protocolDateColumn}><Text style={styles.smallLabel}>END DATE</Text><Text style={styles.protocolDateText}>{activeProtocol.ends_on || 'OPEN-ENDED'}</Text></View>
+                  <View style={styles.protocolDateColumn}><Text style={styles.smallLabel}>START DATE</Text><Text style={styles.protocolDateText}>{displayProtocolDate(activeProtocol.starts_on)}</Text></View>
+                  <View style={styles.protocolDateColumn}><Text style={styles.smallLabel}>END DATE</Text><Text style={styles.protocolDateText}>{displayProtocolDate(activeProtocol.ends_on)}</Text></View>
                 </View>
                 {editingProtocolId === activeProtocol.id ? (
                   <View style={styles.protocolEditPanel}>
@@ -362,8 +369,8 @@ export default function ProtocolScreen() {
                     <TextInput accessibilityLabel="Edit protocol name" maxLength={100} style={styles.input} value={editProtocolName} onChangeText={setEditProtocolName} placeholderTextColor={colors.muted} />
                     <Text style={styles.smallLabel}>TRACKING DATES · OPTIONAL</Text>
                     <View style={styles.twoCol}>
-                      <TextInput accessibilityLabel="Start date YYYY-MM-DD" autoCapitalize="none" style={[styles.input, styles.flex]} placeholder="Start YYYY-MM-DD" placeholderTextColor={colors.muted} value={editStartsOn} onChangeText={setEditStartsOn} />
-                      <TextInput accessibilityLabel="End date YYYY-MM-DD" autoCapitalize="none" style={[styles.input, styles.flex]} placeholder="End YYYY-MM-DD" placeholderTextColor={colors.muted} value={editEndsOn} onChangeText={setEditEndsOn} />
+                      <ProtocolDatePicker label="Start date" value={editStartsOn} onChange={setEditStartsOn} optional />
+                      <ProtocolDatePicker label="End date" value={editEndsOn} onChange={setEditEndsOn} optional />
                     </View>
                     <Text style={styles.protocolEditHint}>Dates restrict Today and the protocol map to that window. Leave either blank for an open boundary.</Text>
                     <View style={styles.protocolActions}>
@@ -500,7 +507,7 @@ export default function ProtocolScreen() {
                   </Pressable>
                 ))}
               </View>
-              <TextInput style={styles.input} placeholder="Time (24h)" placeholderTextColor={colors.muted} value={time} onChangeText={setTime} />
+              <ProtocolTimePicker label="Scheduled time" value={time} onChange={setTime} />
 
               {scheduleType === 'weekdays' ? (
                 <View style={styles.dayRow}>
@@ -654,8 +661,8 @@ export default function ProtocolScreen() {
                         </Pressable>
                       ))}</View>
                       {editScheduleType !== 'as_needed' ? (
-                        <><Text style={styles.smallLabel}>TIME · 24-HOUR FORMAT (OPTIONAL)</Text>
-                        <TextInput style={styles.input} accessibilityLabel="Scheduled time HH:MM" placeholder="08:00" placeholderTextColor={colors.muted} value={editTime} onChangeText={setEditTime} /></>
+                        <><Text style={styles.smallLabel}>SCHEDULED TIME · 12-HOUR OR 24-HOUR</Text>
+                        <ProtocolTimePicker label="Scheduled time" value={editTime} onChange={setEditTime} /></>
                       ) : null}
                       {editScheduleType === 'weekdays' ? (
                         <><Text style={styles.smallLabel}>DAYS OF THE WEEK</Text><View style={styles.dayRow}>{DAY_LABELS.map((label, day) => (
@@ -665,8 +672,8 @@ export default function ProtocolScreen() {
                         ))}</View></>
                       ) : null}
                       {editScheduleType === 'interval' || editScheduleType === 'cycle' ? (
-                        <><Text style={styles.smallLabel}>ANCHOR DATE · YYYY-MM-DD</Text>
-                        <TextInput style={styles.input} accessibilityLabel="Schedule start date" placeholder="YYYY-MM-DD" placeholderTextColor={colors.muted} value={editStartDate} onChangeText={setEditStartDate} autoCapitalize="none" />
+                        <><Text style={styles.smallLabel}>ANCHOR DATE</Text>
+                        <ProtocolDatePicker label="Schedule anchor date" value={editStartDate} onChange={setEditStartDate} />
                         <Text style={styles.scheduleHint}>Changing the anchor date will change where interval or cycle days fall.</Text></>
                       ) : null}
                       {editScheduleType === 'interval' ? (
@@ -690,6 +697,14 @@ export default function ProtocolScreen() {
                       <Text style={styles.smallLabel}>EDIT SUBSTANCE · {item.name}</Text>
                       <TextInput accessibilityLabel="Substance name" style={styles.input} maxLength={100} value={editItemName} onChangeText={setEditItemName} />
                       <View style={styles.chips}>{CATEGORIES.map((cat) => <Pressable accessibilityRole="button" accessibilityState={{ selected: editCategory === cat }} key={cat} onPress={() => setEditCategory(cat)} style={[styles.chip, editCategory === cat && styles.chipActive]}><Text style={[styles.chipText, editCategory === cat && styles.chipTextActive]}>{cat}</Text></Pressable>)}</View>
+                      <Text style={styles.smallLabel}>TRACKED AMOUNT AND UNIT</Text>
+                      <View style={styles.twoCol}>
+                        <TextInput accessibilityLabel="Dose amount" style={[styles.input, styles.flex]} keyboardType="decimal-pad" value={editDose} onChangeText={setEditDose} />
+                        <TextInput accessibilityLabel="Dose unit" style={[styles.input, styles.flex]} value={editUnit} onChangeText={setEditUnit} />
+                      </View>
+                      <Text style={styles.smallLabel}>ROUTE</Text>
+                      <View style={styles.chips}>{ROUTES.map((kind) => <Pressable key={kind} accessibilityRole="button" accessibilityState={{ selected: editRoute === kind }} style={[styles.chip, editRoute === kind && styles.chipActive]} onPress={() => setEditRoute(kind)}><Text style={[styles.chipText, editRoute === kind && styles.chipTextActive]}>{kind}</Text></Pressable>)}</View>
+                      <Text style={styles.scheduleHint}>Changing units will not convert previously recorded inventory or dose history.</Text>
                       <View style={styles.builderNav}>
                         <Pressable style={styles.backButton} disabled={busy} onPress={() => setEditingItemId(null)}><Text style={styles.backText}>CANCEL</Text></Pressable>
                         <Pressable style={[styles.primary, styles.flex]} disabled={busy} onPress={() => void saveItemEdit()}><Text style={styles.primaryText}>{busy ? 'SAVING…' : 'SAVE DETAILS'}</Text></Pressable>
