@@ -22,8 +22,9 @@ async function storageKey() {
 export async function readCalendarConnection(): Promise<CalendarConnection | null> {
   const raw = await AsyncStorage.getItem(await storageKey());
   if (!raw) return null;
-  const parsed: CalendarConnection = JSON.parse(raw);
-  if (!parsed.calendarId || !parsed.events) return null;
+  let parsed: CalendarConnection;
+  try { parsed = JSON.parse(raw); } catch { return null; }
+  if (!parsed || typeof parsed.calendarId !== 'string' || !parsed.events || typeof parsed.events !== 'object') return null;
   return parsed;
 }
 
@@ -36,7 +37,11 @@ async function persist(connection: CalendarConnection | null) {
 async function calendarApi() {
   if (Platform.OS !== 'ios' && Platform.OS !== 'android') throw new Error('Calendar linking is available on iOS and Android only.');
   // Keep older development clients functional until the native Expo Calendar rebuild is installed.
-  return import('expo-calendar/legacy');
+  try {
+    return await import('expo-calendar/legacy');
+  } catch {
+    throw new Error('Calendar needs a new Pulse development build with Expo Calendar installed. Rebuild and reinstall the app to enable syncing.');
+  }
 }
 
 export async function requestWritableCalendars(): Promise<WritableCalendar[]> {
