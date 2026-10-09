@@ -106,7 +106,7 @@ export function validateTrackedSchedule(schedule: Record<string, unknown>) {
   }
   const time = schedule.time;
   if (type !== 'as_needed' && time !== undefined) {
-    if (typeof time !== 'string' || !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(time)) {
+    if (typeof time !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
       throw new Error('Use a valid time in 24-hour HH:MM format.');
     }
   }
@@ -118,7 +118,7 @@ export function validateTrackedSchedule(schedule: Record<string, unknown>) {
   }
   if (type === 'interval' || type === 'cycle') {
     const startDate = schedule.startDate;
-    if (typeof startDate !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(startDate)) {
+    if (typeof startDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
       throw new Error('Enter the schedule anchor date in YYYY-MM-DD format.');
     }
     const [year = 0, month = 0, day = 0] = startDate.split('-').map(Number);
