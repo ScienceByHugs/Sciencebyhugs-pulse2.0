@@ -93,8 +93,8 @@ export function buildCalendarPreview(items: TodayItem[], protocols: Array<{ id: 
       if (!protocol || protocol.status !== 'active') continue;
       if ((protocol.starts_on && day < protocol.starts_on) || (protocol.ends_on && day > protocol.ends_on)) continue;
       if (!isDueOnDate(item.schedule, date)) continue;
-      const time = scheduleTime(item.schedule);
-      if (!time || !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(time)) continue;
+      const time = scheduleTime(item.schedule, date);
+      if (!time || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) continue;
       const [hour = 0, minute = 0] = time.split(':').map(Number);
       const startDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute);
       const endDate = new Date(startDate.getTime() + 15 * 60 * 1000);

@@ -54,8 +54,12 @@ export default function CalendarScreen() {
     if (busy) return;
     try {
       setBusy(true);
-      setConnection(await connectCalendar(calendar));
+      const nextConnection = await connectCalendar(calendar);
+      setConnection(nextConnection);
       setCalendars([]);
+      const result = await syncCalendarEvents(preview);
+      setConnection(await readCalendarConnection());
+      Alert.alert('Calendar connected and synced', `${result.added} scheduled check-ins added to ${calendar.title}.`);
     } catch (error) {
       Alert.alert('Unable to connect calendar', error instanceof Error ? error.message : String(error));
     } finally {
@@ -68,6 +72,10 @@ export default function CalendarScreen() {
     try {
       setBusy(true);
       setConnection(await setCalendarTitlePrivacy(includeNames));
+      if (connection) {
+        await syncCalendarEvents(preview);
+        setConnection(await readCalendarConnection());
+      }
     } catch (error) {
       Alert.alert('Unable to update privacy', error instanceof Error ? error.message : String(error));
     } finally {
@@ -153,7 +161,7 @@ export default function CalendarScreen() {
         <View style={styles.card}>
           <Text style={styles.eyebrow}>NEXT 14 DAYS / PREVIEW</Text>
           <Text style={styles.heading}>{preview.length} scheduled check-ins</Text>
-          <Text style={styles.detail}>Only active protocol items with valid clock times are included. As-needed items are excluded. This is a one-time rolling sync, not background synchronization.</Text>
+          <Text style={styles.detail}>Only active protocol items with valid clock times are included. As-needed items are excluded. Connecting syncs these entries immediately. Use Sync to refresh the next 14 days after schedule changes.</Text>
           {preview.slice(0, 5).map((event) => (
             <View key={event.key} style={styles.previewRow}>
               <View style={styles.previewDot} />
@@ -165,7 +173,7 @@ export default function CalendarScreen() {
           ))}
           {preview.length > 5 ? <Text style={styles.moreText}>+ {preview.length - 5} MORE SCHEDULED</Text> : null}
           {connection ? (
-            <Pressable accessibilityRole="button" disabled={busy} style={styles.primary} onPress={() => void runSync()}><Text style={styles.primaryText}>{busy ? 'SYNCING…' : 'SYNC THESE ENTRIES'}</Text></Pressable>
+            <Pressable accessibilityRole="button" disabled={busy} style={styles.primary} onPress={() => void runSync()}><Text style={styles.primaryText}>{busy ? 'SYNCING…' : 'REFRESH CALENDAR SYNC'}</Text></Pressable>
           ) : (
             <Text style={styles.footnote}>Connect a calendar above to enable syncing.</Text>
           )}
