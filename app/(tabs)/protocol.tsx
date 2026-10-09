@@ -4,7 +4,7 @@ import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput
 import { colors, layout, radius, spacing, type } from '@/theme';
 import { PulseMenu } from '@/components/PulseMenu';
 import { SubstanceArtwork } from '@/components/SubstanceArtwork';
-import { createProtocol, createProtocolItem, listProtocolItems, listProtocols, setProtocolItemActive, setProtocolItemArchived, updateProtocolItemDetails, updateProtocolItemSchedule, updateProtocolDetails, updateProtocolStatus, type TodayItem } from '@/services/pulse';
+import { addInventoryContainer, correctInventoryRemaining, createProtocol, createProtocolItem, listProtocolItems, listProtocols, setProtocolItemActive, setProtocolItemArchived, updateProtocolItemDetails, updateProtocolItemSchedule, updateProtocolDetails, updateProtocolStatus, type TodayItem } from '@/services/pulse';
 import { formatSchedule, isDueOnDate, localDateKey, scheduleTime } from '@/domain/schedule';
 
 type Protocol = { id: string; name: string; status: string; starts_on: string | null; ends_on: string | null };
@@ -48,6 +48,11 @@ export default function ProtocolScreen() {
   const [offDays, setOffDays] = useState('2');
   const [inventory, setInventory] = useState('');
   const [busy, setBusy] = useState(false);
+  const [reservoirEditorId, setReservoirEditorId] = useState<string | null>(null);
+  const [reservoirContainerId, setReservoirContainerId] = useState<string | null>(null);
+  const [reservoirQuantity, setReservoirQuantity] = useState('');
+  const [reservoirThreshold, setReservoirThreshold] = useState('0');
+  const [reservoirReason, setReservoirReason] = useState('');
   const [showBuilder, setShowBuilder] = useState(false);
   const [showMapDetails, setShowMapDetails] = useState(false);
   const [builderStep, setBuilderStep] = useState<1 | 2 | 3>(1);
@@ -176,6 +181,31 @@ export default function ProtocolScreen() {
       await load();
     } catch (error) {
       Alert.alert(archived ? 'Could not archive substance' : 'Could not restore substance', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveReservoir(item: TodayItem) {
+    if (busy) return;
+    const quantity = Number(reservoirQuantity);
+    if (!reservoirQuantity.trim() || !Number.isFinite(quantity)) return Alert.alert('Check quantity', 'Enter a valid numeric amount.');
+    try {
+      setBusy(true);
+      if (reservoirContainerId) {
+        await correctInventoryRemaining(reservoirContainerId, quantity, reservoirReason);
+      } else {
+        const threshold = Number(reservoirThreshold);
+        if (!reservoirThreshold.trim() || !Number.isFinite(threshold)) throw new Error('Enter a valid low-stock threshold.');
+        await addInventoryContainer(item.id, quantity, item.dose_unit, threshold);
+      }
+      setReservoirEditorId(null);
+      setReservoirContainerId(null);
+      setReservoirQuantity('');
+      setReservoirReason('');
+      await load();
+    } catch (error) {
+      Alert.alert('Could not update reservoir', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setBusy(false);
     }
@@ -564,6 +594,44 @@ export default function ProtocolScreen() {
                       <Text style={styles.signatureReservoirFoot}>{isLow ? 'LOW STOCK · ' : ''}{Math.round(fraction)}% OF ORIGINAL CONTAINER QUANTITY</Text>
                     </View>
                   ) : null}
+                  <View style={{ gap: 9 }}>
+                    {(item.inventory_containers ?? []).map((container, index) => (
+                      <View key={container.id} style={styles.protocolRow}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.itemTitle}>CONTAINER {index + 1}</Text>
+                          <Text style={styles.cardDetail}>{container.remaining_amount} / {container.total_amount} {container.unit} · Low at {container.low_threshold} {container.unit}</Text>
+                        </View>
+                        <Pressable accessibilityRole="button" accessibilityLabel={`Correct container ${index + 1} balance`} disabled={busy} style={styles.activateButton} onPress={() => { setReservoirEditorId(item.id); setReservoirContainerId(container.id); setReservoirQuantity(String(container.remaining_amount)); setReservoirReason(''); }}>
+                          <Text style={styles.activateText}>CORRECT</Text>
+                        </Pressable>
+                      </View>
+                    ))}
+                    <Pressable accessibilityRole="button" accessibilityLabel={`Add container for ${item.name}`} disabled={busy} style={styles.scheduleEditTrigger} onPress={() => { setReservoirEditorId(item.id); setReservoirContainerId(null); setReservoirQuantity(''); setReservoirThreshold('0'); }}>
+                      <Text style={styles.scheduleEditTriggerText}>＋ ADD CONTAINER</Text>
+                    </Pressable>
+                    {reservoirEditorId === item.id ? (
+                      <View style={styles.scheduleEditor}>
+                        <Text style={styles.smallLabel}>{reservoirContainerId ? 'CORRECT REMAINING QUANTITY' : 'NEW CONTAINER · QUANTITY'}</Text>
+                        <TextInput accessibilityLabel="Container quantity" keyboardType="decimal-pad" style={styles.input} value={reservoirQuantity} onChangeText={setReservoirQuantity} placeholder="Quantity" placeholderTextColor={colors.muted} />
+                        <Text style={styles.cardDetail}>Unit: {item.dose_unit}</Text>
+                        {reservoirContainerId ? (
+                          <>
+                            <Text style={styles.smallLabel}>REASON FOR CORRECTION · REQUIRED</Text>
+                            <TextInput accessibilityLabel="Reason for inventory correction" style={styles.input} value={reservoirReason} onChangeText={setReservoirReason} placeholder="e.g. manual recount" placeholderTextColor={colors.muted} />
+                          </>
+                        ) : (
+                          <>
+                            <Text style={styles.smallLabel}>LOW STOCK WHEN REMAINING AT OR BELOW</Text>
+                            <TextInput accessibilityLabel="Low stock quantity threshold" keyboardType="decimal-pad" style={styles.input} value={reservoirThreshold} onChangeText={setReservoirThreshold} />
+                          </>
+                        )}
+                        <View style={styles.protocolActions}>
+                          <Pressable accessibilityRole="button" disabled={busy} style={styles.secondaryAction} onPress={() => setReservoirEditorId(null)}><Text style={styles.secondaryActionText}>CANCEL</Text></Pressable>
+                          <Pressable accessibilityRole="button" disabled={busy} style={styles.primaryInline} onPress={() => void saveReservoir(item)}><Text style={styles.primaryText}>SAVE</Text></Pressable>
+                        </View>
+                      </View>
+                    ) : null}
+                  </View>
                   <View style={styles.signatureActions}>
                     <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${item.name}`} style={styles.signatureEditButton} disabled={busy} onPress={() => { setEditingScheduleId(null); startEdit(item); }}>
                       <Text style={styles.signatureEditText}>EDIT DETAILS  ↗</Text>

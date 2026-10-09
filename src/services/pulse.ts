@@ -369,3 +369,38 @@ export async function listDoseLogs(limit = 50) {
   if (error) throw error;
   return data as unknown as TimelineEntry[];
 }
+
+export async function addInventoryContainer(itemId: string, amount: number, unit: string, lowThreshold: number) {
+  const userId = await currentUserId();
+  if (!Number.isFinite(amount) || amount <= 0 || !Number.isFinite(lowThreshold) || lowThreshold < 0) {
+    throw new Error('Enter a positive quantity and a nonnegative low-stock threshold.');
+  }
+  const { data: item, error: itemError } = await supabase.from('protocol_items')
+    .select('id,dose_unit')
+    .eq('id', itemId).eq('user_id', userId).maybeSingle();
+  if (itemError) throw itemError;
+  if (!item) throw new Error('Substance is missing or not owned by this account.');
+  if (unit.trim() !== item.dose_unit) throw new Error('Container unit must match the substance unit. Convert quantities before adding.');
+  const { error } = await supabase.from('inventory_containers').insert({
+    user_id: userId,
+    protocol_item_id: itemId,
+    total_amount: amount,
+    remaining_amount: amount,
+    unit: unit.trim(),
+    low_threshold: lowThreshold,
+    is_active: true
+  });
+  if (error) throw error;
+}
+
+export async function correctInventoryRemaining(containerId: string, newAmount: number, reason: string) {
+  if (!Number.isFinite(newAmount) || newAmount < 0) throw new Error('Remaining quantity must be zero or higher.');
+  const explanation = reason.trim();
+  if (explanation.length < 3 || explanation.length > 500) throw new Error('Explain the correction in 3–500 characters.');
+  const { error } = await supabase.rpc('correct_inventory_remaining', {
+    p_container_id: containerId,
+    p_new_amount: newAmount,
+    p_reason: explanation
+  });
+  if (error) throw error;
+}
