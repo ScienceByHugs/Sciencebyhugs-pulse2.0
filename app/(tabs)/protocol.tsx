@@ -26,6 +26,9 @@ export default function ProtocolScreen() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editItemName, setEditItemName] = useState('');
   const [editCategory, setEditCategory] = useState('Other');
+  const [editDose, setEditDose] = useState('');
+  const [editUnit, setEditUnit] = useState('mg');
+  const [editRoute, setEditRoute] = useState<(typeof ROUTES)[number]>('subcutaneous');
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [editScheduleType, setEditScheduleType] = useState<'daily' | 'weekdays' | 'interval' | 'cycle' | 'as_needed'>('daily');
   const [editTime, setEditTime] = useState('');
@@ -216,13 +219,16 @@ export default function ProtocolScreen() {
     setEditingItemId(item.id);
     setEditItemName(item.name);
     setEditCategory(item.category || 'Other');
+    setEditDose(String(item.dose_amount));
+    setEditUnit(item.dose_unit);
+    setEditRoute(item.route as (typeof ROUTES)[number]);
   }
 
   async function saveItemEdit() {
     if (!editingItemId) return;
     try {
       setBusy(true);
-      await updateProtocolItemDetails(editingItemId, editItemName, editCategory);
+      await updateProtocolItemDetails(editingItemId, editItemName, editCategory, Number(editDose), editUnit, editRoute);
       setEditingItemId(null);
       await load();
     } catch (error) {
@@ -691,6 +697,14 @@ export default function ProtocolScreen() {
                       <Text style={styles.smallLabel}>EDIT SUBSTANCE · {item.name}</Text>
                       <TextInput accessibilityLabel="Substance name" style={styles.input} maxLength={100} value={editItemName} onChangeText={setEditItemName} />
                       <View style={styles.chips}>{CATEGORIES.map((cat) => <Pressable accessibilityRole="button" accessibilityState={{ selected: editCategory === cat }} key={cat} onPress={() => setEditCategory(cat)} style={[styles.chip, editCategory === cat && styles.chipActive]}><Text style={[styles.chipText, editCategory === cat && styles.chipTextActive]}>{cat}</Text></Pressable>)}</View>
+                      <Text style={styles.smallLabel}>TRACKED AMOUNT AND UNIT</Text>
+                      <View style={styles.twoCol}>
+                        <TextInput accessibilityLabel="Dose amount" style={[styles.input, styles.flex]} keyboardType="decimal-pad" value={editDose} onChangeText={setEditDose} />
+                        <TextInput accessibilityLabel="Dose unit" style={[styles.input, styles.flex]} value={editUnit} onChangeText={setEditUnit} />
+                      </View>
+                      <Text style={styles.smallLabel}>ROUTE</Text>
+                      <View style={styles.chips}>{ROUTES.map((kind) => <Pressable key={kind} accessibilityRole="button" accessibilityState={{ selected: editRoute === kind }} style={[styles.chip, editRoute === kind && styles.chipActive]} onPress={() => setEditRoute(kind)}><Text style={[styles.chipText, editRoute === kind && styles.chipTextActive]}>{kind}</Text></Pressable>)}</View>
+                      <Text style={styles.scheduleHint}>Changing units will not convert previously recorded inventory or dose history.</Text>
                       <View style={styles.builderNav}>
                         <Pressable style={styles.backButton} disabled={busy} onPress={() => setEditingItemId(null)}><Text style={styles.backText}>CANCEL</Text></Pressable>
                         <Pressable style={[styles.primary, styles.flex]} disabled={busy} onPress={() => void saveItemEdit()}><Text style={styles.primaryText}>{busy ? 'SAVING…' : 'SAVE DETAILS'}</Text></Pressable>
