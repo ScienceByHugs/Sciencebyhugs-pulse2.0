@@ -259,8 +259,27 @@ function isNetworkError(error: unknown) {
   return /network|fetch|offline|connection/i.test(message);
 }
 
+export function selectInventoryContainer(item: TodayItem): InventorySummary | null {
+  const containers = item.inventory_containers ?? [];
+  if (containers.length === 0) return null;
+  const eligible = containers
+    .filter((container) =>
+      container.is_active &&
+      container.unit === item.dose_unit &&
+      Number.isFinite(Number(container.remaining_amount)) &&
+      Number(container.remaining_amount) >= item.dose_amount
+    )
+    .sort((a, b) =>
+      Number(a.remaining_amount) - Number(b.remaining_amount) || a.id.localeCompare(b.id)
+    );
+  return eligible[0] ?? null;
+}
+
 export async function quickLog(item: TodayItem, site?: string) {
-  const activeInventory = item.inventory_containers?.find((container) => container.is_active);
+  const activeInventory = selectInventoryContainer(item);
+  if ((item.inventory_containers?.length ?? 0) > 0 && !activeInventory) {
+    throw new Error('No active container has enough matching-unit stock. Update your Supply Reservoir before logging.');
+  }
   const payload: QuickLogPayload = {
     protocolItemId: item.id,
     amount: item.dose_amount,
