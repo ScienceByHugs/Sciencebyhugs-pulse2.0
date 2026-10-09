@@ -308,6 +308,35 @@ export async function listRecentSites(limit = 100) {
   return byItem;
 }
 
+// Export-ready history retrieval: advance over stable pages instead of silently
+// dropping all but the first 1,000 events. The safety cap is surfaced in UI.
+export async function listTimelineHistory(maxEntries = 10000) {
+  const pageSize = 500;
+  const result: TimelineEntry[] = [];
+  let truncated = false;
+  for (let from = 0; from < maxEntries; from += pageSize) {
+    const take = Math.min(pageSize, maxEntries - from);
+    const { data, error } = await supabase
+      .from('dose_logs')
+      .select('id,protocol_item_id,amount,unit,route,site,status,logged_at,protocol_items(name)')
+      .order('logged_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(from, from + take - 1);
+    if (error) throw error;
+    const batch = (data ?? []) as unknown as TimelineEntry[];
+    result.push(...batch);
+    if (batch.length < take) return { entries: result, truncated: false };
+  }
+  // Determine whether the cap is reached with more records remaining.
+  const { data: beyond, error } = await supabase
+    .from('dose_logs').select('id')
+    .order('logged_at', { ascending: false }).order('id', { ascending: false })
+    .range(maxEntries, maxEntries);
+  if (error) throw error;
+  truncated = (beyond?.length ?? 0) > 0;
+  return { entries: result, truncated };
+}
+
 export async function listDoseLogs(limit = 50) {
   const { data, error } = await supabase
     .from('dose_logs')
