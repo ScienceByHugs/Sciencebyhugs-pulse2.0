@@ -7,11 +7,11 @@ create or replace function public.log_dose_and_decrement(
   p_protocol_item_id uuid,
   p_amount numeric,
   p_unit text,
-  p_route text,
-  p_site text,
-  p_inventory_container_id uuid,
-  p_scheduled_for timestamptz,
-  p_client_event_id uuid
+  p_route text DEFAULT NULL,
+  p_site text DEFAULT NULL,
+  p_inventory_container_id uuid DEFAULT NULL,
+  p_scheduled_for timestamptz DEFAULT NULL,
+  p_client_event_id uuid DEFAULT NULL
 ) returns public.dose_logs
 language plpgsql set search_path = 'public'
 as $$
