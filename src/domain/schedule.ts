@@ -158,7 +158,7 @@ export function localDayRange(date = new Date()) {
 export function nextScheduledTimeToday(schedules: Record<string, unknown>[], now = new Date()) {
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   return schedules
-    .map(scheduleTime)
+    .map((schedule) => scheduleTime(schedule, now))
     .filter((time): time is string => Boolean(time))
     .map((time) => {
       const match = /^(\d{1,2}):(\d{2})$/.exec(time);
