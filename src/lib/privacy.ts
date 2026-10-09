@@ -4,6 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 const BIOMETRIC_KEY = 'pulse.biometric_lock';
 const PRIVATE_NOTIFICATIONS_KEY = 'pulse.private_notifications';
 const REMINDERS_KEY = 'pulse.reminders_enabled';
+const LOW_STOCK_KEY = 'pulse.low_stock_alerts_enabled';
 
 async function getBoolean(key: string, fallback = false) {
   if (Platform.OS === 'web') return fallback;
@@ -25,3 +26,6 @@ export const getPrivateNotifications = () => getBoolean(PRIVATE_NOTIFICATIONS_KE
 export const setPrivateNotifications = (value: boolean) => setBoolean(PRIVATE_NOTIFICATIONS_KEY, value);
 export const getRemindersEnabled = () => getBoolean(REMINDERS_KEY);
 export const setRemindersEnabled = (value: boolean) => setBoolean(REMINDERS_KEY, value);
+
+export const getLowStockAlertsEnabled = () => getBoolean(LOW_STOCK_KEY);
+export const setLowStockAlertsEnabled = (value: boolean) => setBoolean(LOW_STOCK_KEY, value);
