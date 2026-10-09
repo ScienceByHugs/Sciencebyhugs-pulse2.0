@@ -10,11 +10,15 @@ import {
   getBiometricLockEnabled,
   getPrivateNotifications,
   getRemindersEnabled,
+  getLowStockAlertsEnabled,
+  setLowStockAlertsEnabled,
   setBiometricLockEnabled,
   setPrivateNotifications
 } from '@/lib/privacy';
 import { disableReminders, enableReminders, rescheduleReminders } from '@/lib/reminders';
 import { listTodayItems } from '@/services/pulse';
+import { clearLowStockAlertState, notifyLowStock } from '@/lib/lowStock';
+import { requestReminderPermission } from '@/lib/reminders';
 import { deletePulseAccount, exportPulseData } from '@/services/account';
 
 export default function YouScreen() {
@@ -22,6 +26,7 @@ export default function YouScreen() {
   const [biometricLock, setBiometricLock] = useState(false);
   const [privateNotifications, setPrivateNotificationsState] = useState(true);
   const [reminders, setReminders] = useState(false);
+  const [lowStockAlerts, setLowStockAlerts] = useState(false);
   const [busy, setBusy] = useState(false);
   const [displayName, setDisplayName] = useState(() => String(session?.user.user_metadata?.full_name ?? ''));
   const [savedName, setSavedName] = useState(() => String(session?.user.user_metadata?.full_name ?? ''));
@@ -29,14 +34,16 @@ export default function YouScreen() {
 
 
   const load = useCallback(async () => {
-    const [lock, privateMode, reminderMode] = await Promise.all([
+    const [lock, privateMode, reminderMode, lowStockMode] = await Promise.all([
       getBiometricLockEnabled(),
       getPrivateNotifications(),
-      getRemindersEnabled()
+      getRemindersEnabled(),
+      getLowStockAlertsEnabled()
     ]);
     setBiometricLock(lock);
     setPrivateNotificationsState(privateMode);
     setReminders(reminderMode);
+    setLowStockAlerts(lowStockMode);
     const { data: { user } } = await supabase.auth.getUser();
     const currentName = String(user?.user_metadata?.full_name ?? '');
     setDisplayName(currentName);
@@ -100,6 +107,28 @@ export default function YouScreen() {
       if (!enabled) Alert.alert('Notifications are off', 'Enable notifications for Pulse in device settings to use reminders.');
     } catch (error) {
       Alert.alert('Could not update reminders', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleLowStockAlerts(value: boolean) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      if (value && !(await requestReminderPermission())) {
+        Alert.alert('Notifications are off', 'Enable notifications for Pulse in device settings.');
+        return;
+      }
+      await setLowStockAlertsEnabled(value);
+      setLowStockAlerts(value);
+      if (!value) {
+        await clearLowStockAlertState();
+      } else {
+        await notifyLowStock(await listTodayItems());
+      }
+    } catch (error) {
+      Alert.alert('Could not update supply alerts', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setBusy(false);
     }
@@ -225,6 +254,14 @@ export default function YouScreen() {
             detail="Hide item names and amounts from notification previews."
             value={privateNotifications}
             onValueChange={(value) => void togglePrivateNotifications(value)}
+          />
+          <View style={styles.divider} />
+          <SettingRow
+            title="Low-stock supply alerts"
+            detail="Opt in to discreet alerts when any active container reaches your configured threshold. Names and amounts stay private."
+            value={lowStockAlerts}
+            disabled={busy}
+            onValueChange={(value) => void toggleLowStockAlerts(value)}
           />
         </View>
 
