@@ -16,7 +16,8 @@ const sections = [
   {
     title: 'LABORATORY',
     links: [
-      { label: 'Calculators & Tools', caption: 'Unit-aware arithmetic', route: '/tools', path: '/tools' }
+      { label: 'Calculators & Tools', caption: 'Unit-aware arithmetic', route: '/tools', path: '/tools' },
+      { label: 'Calendar', caption: 'Private opt-in schedule sync', route: '/calendar', path: '/calendar' }
     ]
   },
   {
