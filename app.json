@@ -31,6 +31,12 @@
     "plugins": [
       "expo-router",
       [
+        "expo-calendar",
+        {
+          "calendarPermission": "Allow Pulse to add your selected schedule entries to a calendar you choose. Pulse keeps event titles private by default."
+        }
+      ],
+      [
         "expo-local-authentication",
         {
           "faceIDPermission": "Allow Pulse to use Face ID to protect your private protocol data."
