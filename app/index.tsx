@@ -1,5 +1,6 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect } from 'expo-router';
-import { ActivityIndicator, SafeAreaView } from 'react-native';
+import { ActivityIndicator } from 'react-native';
 import { useAuth } from '@/providers/AuthProvider';
 import { colors } from '@/theme';
 

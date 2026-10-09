@@ -1,6 +1,7 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Host, Icon } from '@expo/ui';
 import { Redirect, Tabs } from 'expo-router';
-import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View, type ColorValue } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View, type ColorValue } from 'react-native';
 import { useAuth } from '@/providers/AuthProvider';
 import { colors } from '@/theme';
 
