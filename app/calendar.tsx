@@ -83,7 +83,7 @@ export default function CalendarScreen() {
       Alert.alert('Calendar updated', `${result.added} added · ${result.updated} updated · ${result.removed} removed.`);
     } catch (error) {
       Alert.alert('Calendar sync stopped', `${error instanceof Error ? error.message : String(error)}\n\nPreviously saved entries are retained so a retry cannot silently create duplicates.`);
-      setConnection(await readCalendarConnection());
+      try { setConnection(await readCalendarConnection()); } catch { /* Keep current connection display on failed sync. */ }
     } finally {
       setBusy(false);
     }
@@ -105,7 +105,7 @@ export default function CalendarScreen() {
       setCalendars([]);
     } catch (error) {
       Alert.alert('Could not disconnect safely', error instanceof Error ? error.message : String(error));
-      setConnection(await readCalendarConnection());
+      try { setConnection(await readCalendarConnection()); } catch { /* Preserve last known connection. */ }
     } finally {
       setBusy(false);
     }
@@ -130,7 +130,7 @@ export default function CalendarScreen() {
           )}
         </View>
 
-        {calendars.length && !connection ? (
+        {calendars.length > 0 && !connection ? (
           <View style={styles.card}>
             <Text style={styles.eyebrow}>WRITABLE CALENDARS ON THIS DEVICE</Text>
             {calendars.map((calendar) => <Pressable accessibilityRole="button" key={calendar.id} style={styles.choice} onPress={() => void selectCalendar(calendar)} disabled={busy}><Text style={styles.choiceText}>{calendar.title}</Text><Text style={styles.choiceArrow}>↗</Text></Pressable>)}
