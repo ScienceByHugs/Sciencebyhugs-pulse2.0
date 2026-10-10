@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
   kicker: { color: colors.accent, fontSize: type.eyebrow, fontWeight: '900', letterSpacing: 1.8 },
   title: { color: colors.text, fontSize: type.title, fontWeight: '700', letterSpacing: -1, marginTop: spacing.xs },
   intro: { color: colors.muted, fontSize: type.body, lineHeight: 21, marginTop: spacing.sm, marginBottom: spacing.lg },
-  panel: { backgroundColor: 'transparent', borderRadius: 0, padding: layout.cardInset, borderWidth: 0, borderColor: 'transparent', gap: 10, marginBottom: spacing.md borderBottomWidth: 1, borderBottomColor: colors.border, },
+  panel: { backgroundColor: 'transparent', borderRadius: 0, padding: layout.cardInset, borderWidth: 0, borderColor: 'transparent', gap: 10, marginBottom: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border, },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   unitButton: { paddingHorizontal: 13, minHeight: 48, justifyContent: 'center', borderWidth: 1, borderColor: colors.accentBorder, borderRadius: radius.md, backgroundColor: colors.accentSoft },
   unitButtonText: { color: colors.accent, fontWeight: '800' },
