@@ -1,3 +1,4 @@
+import { PulseBrand } from '@/components/PulseBrand';
 import { useState } from 'react';
 import { usePathname, useRouter } from 'expo-router';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -36,21 +37,18 @@ export function PulseMenu() {
   return (
     <>
       <View style={styles.brandRow}>
-        <View>
-          <Text style={styles.brand}>SCIENCE BY HUGS</Text>
-          <Text style={styles.pulse}>PULSE <Text style={styles.version}>02 / LAB</Text></Text>
-        </View>
+        <PulseBrand compact />
         <Pressable accessibilityRole="button" accessibilityLabel="Open Pulse navigation" accessibilityHint="Shows app sections and tools" onPress={() => setOpen(true)} style={styles.trigger}>
           <View style={styles.bar} /><View style={styles.bar} /><View style={styles.bar} />
         </Pressable>
       </View>
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <View style={styles.scrim}>
           <Pressable accessibilityRole="button" accessibilityLabel="Dismiss navigation" style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
           <View style={styles.panel}>
             <View style={styles.panelTop}>
               <View style={styles.panelHeading}>
-                <Text style={styles.brand}>SCIENCE BY HUGS</Text>
+                <PulseBrand />
                 <Text style={styles.panelTitle}>Explore Pulse.</Text>
                 <Text style={styles.panelSubtitle}>YOUR WORKSPACE, ORGANIZED.</Text>
               </View>

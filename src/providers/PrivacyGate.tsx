@@ -1,3 +1,4 @@
+import { PulseBrand } from '@/components/PulseBrand';
 import { type PropsWithChildren, useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -74,7 +75,7 @@ export function PrivacyGate({ children }: PropsWithChildren) {
 
   return (
     <View style={styles.page}>
-      <Text style={styles.brand}>PULSE</Text>
+      <PulseBrand />
       <Text style={styles.title}>{checking ? 'Securing Pulse…' : 'Pulse is locked'}</Text>
       {errorText ? <Text style={styles.explanation}>{errorText}</Text> : null}
       {!checking ? (
