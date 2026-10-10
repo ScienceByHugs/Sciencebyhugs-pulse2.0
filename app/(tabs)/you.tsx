@@ -34,6 +34,12 @@ export default function YouScreen() {
   const [displayName, setDisplayName] = useState(() => String(session?.user.user_metadata?.full_name ?? ''));
   const [savedName, setSavedName] = useState(() => String(session?.user.user_metadata?.full_name ?? ''));
   const [savingProfile, setSavingProfile] = useState(false);
+  const [contactPhone, setContactPhone] = useState(() => String(session?.user.user_metadata?.contact_phone ?? ''));
+  const [savedPhone, setSavedPhone] = useState(() => String(session?.user.user_metadata?.contact_phone ?? ''));
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [accountBusy, setAccountBusy] = useState(false);
 
 
   const load = useCallback(async () => {
@@ -51,6 +57,9 @@ export default function YouScreen() {
     const currentName = String(user?.user_metadata?.full_name ?? '');
     setDisplayName(currentName);
     setSavedName(currentName);
+    const phone = String(user?.user_metadata?.contact_phone ?? '');
+    setContactPhone(phone);
+    setSavedPhone(phone);
   }, []);
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
@@ -58,16 +67,56 @@ export default function YouScreen() {
   async function saveProfile() {
     const name = displayName.trim();
     if (!name || name.length > 80) return Alert.alert('Check your name', 'Enter a name of up to 80 characters.');
+    const phone = contactPhone.trim();
+    if (phone.length > 30 || (phone && !/^[+0-9().\-\s]{7,30}$/.test(phone))) return Alert.alert('Check your phone', 'Enter a valid contact phone number, or leave it blank.');
     setSavingProfile(true);
     try {
-      const { error } = await supabase.auth.updateUser({ data: { full_name: name, first_name: name.split(/\s+/)[0] } });
+      const { error } = await supabase.auth.updateUser({ data: { full_name: name, first_name: name.split(/\s+/)[0], contact_phone: phone } });
       if (error) throw error;
       setSavedName(name);
+      setSavedPhone(phone);
       Alert.alert('Profile updated', 'Your welcome message will use your updated name.');
     } catch (error) {
       Alert.alert('Could not save profile', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setSavingProfile(false);
+    }
+  }
+
+  async function requestEmailChange() {
+    const address = newEmail.trim().toLowerCase();
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(address) || address === session?.user.email?.toLowerCase()) {
+      return Alert.alert('Check new email', 'Enter a different, valid email address.');
+    }
+    if (accountBusy) return;
+    setAccountBusy(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ email: address }, { emailRedirectTo: 'pulse://auth/callback' });
+      if (error) throw error;
+      setNewEmail('');
+      Alert.alert('Check your inbox', 'Your email change request was submitted. Follow the verification instructions sent by Supabase. Your sign-in email may not change until confirmation is complete.');
+    } catch (error) {
+      Alert.alert('Could not change email', error instanceof Error ? error.message : 'Please try again.');
+    } finally {
+      setAccountBusy(false);
+    }
+  }
+
+  async function changePassword() {
+    if (newPassword.length < 8) return Alert.alert('Check password', 'Use a password with at least 8 characters.');
+    if (newPassword !== confirmPassword) return Alert.alert('Passwords differ', 'Both password fields must match.');
+    if (accountBusy) return;
+    setAccountBusy(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setNewPassword('');
+      setConfirmPassword('');
+      Alert.alert('Password updated', 'Your new password has been saved.');
+    } catch (error) {
+      Alert.alert('Could not update password', error instanceof Error ? error.message : 'You may need to sign in again or reauthenticate.');
+    } finally {
+      setAccountBusy(false);
     }
   }
 
@@ -222,9 +271,24 @@ export default function YouScreen() {
         </View>
         <View style={styles.profileEditor}>
           <Text style={styles.cardTitle}>Your profile</Text>
-          <Text style={styles.detail}>Choose the name Pulse uses to welcome you.</Text>
+          <Text style={styles.detail}>Set the name and optional contact number shown in your private profile. This phone number is not verified for sign-in or text messages.</Text>
           <TextInput accessibilityLabel="Display name" autoCapitalize="words" autoCorrect={false} maxLength={80} style={styles.profileInput} placeholder="Your name" placeholderTextColor={colors.muted} value={displayName} onChangeText={setDisplayName} />
-          <Pressable accessibilityRole="button" style={[styles.dataButton, (savingProfile || displayName.trim() === savedName) && styles.profileSaveDisabled]} disabled={savingProfile || displayName.trim() === savedName} onPress={() => void saveProfile()}><Text style={styles.dataButtonText}>{savingProfile ? 'SAVING…' : 'SAVE PROFILE'}</Text></Pressable>
+          <TextInput accessibilityLabel="Contact phone number, optional" keyboardType="phone-pad" autoComplete="tel" maxLength={30} style={styles.profileInput} placeholder="Contact phone (optional)" placeholderTextColor={colors.muted} value={contactPhone} onChangeText={setContactPhone} />
+          <Pressable accessibilityRole="button" style={[styles.dataButton, (savingProfile || (displayName.trim() === savedName && contactPhone.trim() === savedPhone)) && styles.profileSaveDisabled]} disabled={savingProfile || (displayName.trim() === savedName && contactPhone.trim() === savedPhone)} onPress={() => void saveProfile()}><Text style={styles.dataButtonText}>{savingProfile ? 'SAVING…' : 'SAVE PROFILE'}</Text></Pressable>
+        </View>
+
+        <Text style={styles.sectionLabel}>ACCOUNT SECURITY</Text>
+        <View style={styles.profileEditor}>
+          <Text style={styles.cardTitle}>Change email</Text>
+          <Text style={styles.detail}>Current sign-in email: {session?.user.email ?? '—'}. A new address may require confirmation through email.</Text>
+          <TextInput accessibilityLabel="New account email" keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" style={styles.profileInput} placeholder="New email address" placeholderTextColor={colors.muted} value={newEmail} onChangeText={setNewEmail} />
+          <Pressable accessibilityRole="button" disabled={accountBusy || !newEmail.trim()} style={[styles.dataButton, (accountBusy || !newEmail.trim()) && styles.profileSaveDisabled]} onPress={() => void requestEmailChange()}><Text style={styles.dataButtonText}>REQUEST EMAIL CHANGE</Text></Pressable>
+          <View style={styles.divider} />
+          <Text style={styles.cardTitle}>Change password</Text>
+          <Text style={styles.detail}>Choose a new password with at least 8 characters. Supabase may require recent authentication.</Text>
+          <TextInput accessibilityLabel="New account password" secureTextEntry autoComplete="new-password" style={styles.profileInput} placeholder="New password" placeholderTextColor={colors.muted} value={newPassword} onChangeText={setNewPassword} />
+          <TextInput accessibilityLabel="Confirm account password" secureTextEntry autoComplete="new-password" style={styles.profileInput} placeholder="Confirm new password" placeholderTextColor={colors.muted} value={confirmPassword} onChangeText={setConfirmPassword} />
+          <Pressable accessibilityRole="button" disabled={accountBusy || !newPassword || !confirmPassword} style={[styles.dataButton, (accountBusy || !newPassword || !confirmPassword) && styles.profileSaveDisabled]} onPress={() => void changePassword()}><Text style={styles.dataButtonText}>UPDATE PASSWORD</Text></Pressable>
         </View>
 
         <View style={styles.shieldCard}>
