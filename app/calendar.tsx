@@ -1,3 +1,4 @@
+import { OrbitalBackground } from '@/components/OrbitalBackground';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
@@ -127,6 +128,7 @@ export default function CalendarScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <OrbitalBackground />
       <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
         <PulseMenu />
         <Text style={styles.kicker}>PULSE / CONNECTED TOOLS</Text>
