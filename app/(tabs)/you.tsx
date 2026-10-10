@@ -18,7 +18,7 @@ import {
   setBiometricLockEnabled,
   setPrivateNotifications
 } from '@/lib/privacy';
-import { disableReminders, enableReminders, rescheduleReminders } from '@/lib/reminders';
+import { disableReminders, enableReminders, rescheduleReminders, sendTestNotification } from '@/lib/reminders';
 import { listTodayItems } from '@/services/pulse';
 import { clearLowStockAlertState, notifyLowStock } from '@/lib/lowStock';
 import { requestReminderPermission } from '@/lib/reminders';
@@ -110,6 +110,22 @@ export default function YouScreen() {
       if (!enabled) Alert.alert('Notifications are off', 'Enable notifications for Pulse in device settings to use reminders.');
     } catch (error) {
       Alert.alert('Could not update reminders', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function testNotification() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const scheduled = await sendTestNotification();
+      Alert.alert(scheduled ? 'Test scheduled' : 'Notifications are disabled',
+        scheduled
+          ? 'A test notification is scheduled for 8 seconds from now. Lock the phone or leave Pulse to check the banner. iOS Focus settings may silence it.'
+          : 'Enable notifications for Pulse in iPhone Settings → Notifications, then try again.');
+    } catch (error) {
+      Alert.alert('Notification test failed', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setBusy(false);
     }
@@ -269,6 +285,11 @@ export default function YouScreen() {
           />
 
         </View>
+
+        <Pressable accessibilityRole="button" accessibilityLabel="Send test notification" disabled={busy} style={styles.dataButton} onPress={() => void testNotification()}>
+          <Text style={styles.dataButtonText}>SEND TEST NOTIFICATION</Text>
+        </Pressable>
+        <Text style={styles.detail}>Schedules one private test alert in 8 seconds. Does not enable recurring reminders.</Text>
 
         <Text style={styles.sectionLabel}>YOUR DATA</Text>
         <View style={styles.card}>
