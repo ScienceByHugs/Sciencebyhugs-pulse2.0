@@ -24,6 +24,23 @@ export default function SignInScreen() {
     if (error) Alert.alert('Could not sign in', error.message);
   }
 
+  async function resetPassword() {
+    const address = email.trim();
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(address)) {
+      return Alert.alert('Enter your email', 'Enter your account email above to request a password reset.');
+    }
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(address, { redirectTo: 'pulse://auth/reset-password' });
+      if (error) throw error;
+      Alert.alert('Check your email', 'If an account exists for this address, a password reset link will arrive shortly. Open it on this phone.');
+    } catch (error) {
+      Alert.alert('Could not request reset', error instanceof Error ? error.message : 'Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function signUp() {
     if (!email || password.length < 8) {
       return Alert.alert('Check your details', 'Use a valid email and a password with at least 8 characters.');
@@ -70,6 +87,7 @@ export default function SignInScreen() {
           <Pressable style={[styles.primary, busy && styles.disabled]} disabled={busy} onPress={signIn}>
             <Text style={styles.primaryText}>{busy ? 'WORKING…' : 'SIGN IN'}</Text>
           </Pressable>
+          <Pressable style={styles.secondary} disabled={busy} onPress={() => void resetPassword()}><Text style={styles.secondaryText}>Forgot password?</Text></Pressable>
           <Pressable style={styles.secondary} disabled={busy} onPress={signUp}>
             <Text style={styles.secondaryText}>Create a Pulse account</Text>
           </Pressable>

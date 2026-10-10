@@ -17,6 +17,13 @@ function paramsFromUrl(url: string) {
 
 async function consumeAuthUrl(url: string) {
   const params = paramsFromUrl(url);
+  const tokenHash = params.get('token_hash');
+  const type = params.get('type');
+  if (tokenHash && (type === 'recovery' || type === 'email' || type === 'signup')) {
+    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+    if (error) throw error;
+    return;
+  }
   const code = params.get('code');
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
