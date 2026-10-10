@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   trigger: { minHeight: layout.minTapHeight, width: 46, borderWidth: 0, backgroundColor: 'transparent', borderRadius: radius.md, justifyContent: 'center', alignItems: 'center', gap: 5 },
   bar: { width: 18, height: 2, backgroundColor: colors.accent, borderRadius: 2 },
   scrim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-start', paddingTop: 38 },
-  panel: { marginHorizontal: 12, marginBottom: 20, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.accentBorder, backgroundColor: colors.panel, maxHeight: '91%', overflow: 'hidden' },
+  panel: { marginHorizontal: 12, marginBottom: 20, borderRadius: 0, borderWidth: 0, borderColor: 'transparent', backgroundColor: 'transparent', maxHeight: '91%', overflow: 'hidden', borderBottomWidth: 1, borderBottomColor: colors.border, },
   panelTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', padding: layout.cardInset, borderBottomWidth: 1, borderBottomColor: colors.border },
   panelHeading: { flex: 1, minWidth: 0 },
   panelTitle: { color: colors.text, fontSize: 27, fontWeight: '900', letterSpacing: -0.9, marginTop: 7 },
