@@ -1,3 +1,4 @@
+import { OrbitalBackground } from '@/components/OrbitalBackground';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -173,6 +174,7 @@ export default function TodayScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <OrbitalBackground />
       <ScrollView
         contentContainerStyle={styles.page}
         showsVerticalScrollIndicator={false}
