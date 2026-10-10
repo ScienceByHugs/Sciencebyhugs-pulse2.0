@@ -1,3 +1,4 @@
+import { PulseBrand } from '@/components/PulseBrand';
 import { OrbitalBackground } from '@/components/OrbitalBackground';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCallback, useState } from 'react';
@@ -281,6 +282,7 @@ export default function YouScreen() {
           </Pressable>
         </View>
 
+        <View style={styles.brandFooter}><PulseBrand compact /></View>
         <View style={styles.aboutRow}>
           <Text style={styles.aboutText}>Pulse 2.0</Text>
           <Text style={styles.aboutText}>Science By Hugs</Text>
@@ -311,6 +313,7 @@ function SettingRow({ title, detail, value, disabled, onValueChange }: {
 }
 
 const styles = StyleSheet.create({
+  brandFooter: { marginTop: spacing.lg, marginBottom: spacing.sm },
   safe: { flex: 1, backgroundColor: colors.bg },
   page: { padding: layout.pageInset, paddingBottom: layout.pageBottom },
   eyebrow: { color: colors.accent, fontSize: type.eyebrow, fontWeight: '900', letterSpacing: 1.8, marginTop: spacing.md },
