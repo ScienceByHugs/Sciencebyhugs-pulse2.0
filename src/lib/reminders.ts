@@ -90,3 +90,27 @@ export async function disableReminders() {
   await setRemindersEnabled(false);
   if (Platform.OS !== 'web') await Notifications.cancelAllScheduledNotificationsAsync();
 }
+
+/** One-off local test. Does not change the user's reminder preferences. */
+export async function sendTestNotification(): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
+  const permission = await Notifications.getPermissionsAsync();
+  // A test button is an explicit user action, so requesting missing permission is allowed.
+  const allowed = permission.granted || (permission.canAskAgain && await requestReminderPermission());
+  if (!allowed) return false;
+
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: 'Pulse test notification',
+      body: 'Notifications are working. Live long and prosper. 🖖',
+      sound: false,
+      data: { kind: 'manual-notification-test' }
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: new Date(Date.now() + 8000),
+      channelId: Platform.OS === 'android' ? 'pulse-reminders' : undefined
+    }
+  });
+  return true;
+}
