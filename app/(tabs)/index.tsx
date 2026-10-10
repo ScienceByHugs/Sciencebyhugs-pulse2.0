@@ -196,7 +196,7 @@ export default function TodayScreen() {
             opacity: completionPulse.interpolate({ inputRange: [0, 1], outputRange: [0, .24] }),
             transform: [{ scale: completionPulse.interpolate({ inputRange: [0, 1], outputRange: [.72, 1.18] }) }]
           }]} />
-          <Text style={styles.heroKicker}>THE DAILY EDITION · SCIENCE BY HUGS</Text>
+          <Text style={styles.heroKicker}>TODAY</Text>
           <Text style={styles.greeting}>{firstName ? `Welcome back, ${firstName}.` : 'Welcome to Pulse.'}</Text>
           <Text style={styles.date}>{dateLabel}</Text>
           <View style={styles.summaryRow}>
@@ -205,10 +205,7 @@ export default function TodayScreen() {
             <View style={styles.summaryCell}><Text style={styles.summaryNumber}>{allItems.length}</Text><Text style={styles.summaryLabel}>ACTIVE ITEMS</Text></View>
           </View>
 
-          <View style={styles.heroFooter}>
-            <View style={styles.heroFooterBar} />
-            <Text style={styles.heroFooterText}>{pendingItems.length ? `${pendingItems.length} AWAITING YOUR LOG` : 'YOUR DAY, AT A GLANCE'}</Text>
-          </View>
+          <Text style={styles.heroFooterText}>{pendingItems.length ? `${pendingItems.length} left to log` : 'You’re all caught up'}</Text>
         </Animated.View>
 
         {loading && allItems.length === 0 ? <ActivityIndicator color={colors.accent} style={{ marginTop: 32 }} /> : null}
@@ -354,11 +351,11 @@ const styles = StyleSheet.create({
   livePill: { borderRadius: 999, borderWidth: 1, borderColor: colors.accentBorder, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.accentSoft },
   liveText: { color: colors.accent, fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
   completionPulse: { position: 'absolute', top: 56, alignSelf: 'center', width: 210, height: 210, borderRadius: 105, borderWidth: 1, borderColor: colors.accent },
-  heroHeader: { marginBottom: 2, borderRadius: radius.xl, padding: 12, backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.accentBorder, overflow: 'hidden' },
-  heroKicker: { color: colors.accent, fontSize: type.eyebrow, fontWeight: '900', letterSpacing: 1.6, marginBottom: 4 },
+  heroHeader: { marginBottom: spacing.md, paddingHorizontal: 2, paddingVertical: spacing.sm, backgroundColor: 'transparent', overflow: 'hidden' },
+  heroKicker: { color: colors.muted, fontSize: 11, fontWeight: '600', letterSpacing: 1.8, marginBottom: 8 },
   heroFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 7, gap: 8 },
   heroFooterBar: { width: 18, height: 3, backgroundColor: colors.success, borderRadius: 2 },
-  heroFooterText: { flex: 1, color: colors.muted, fontSize: 9, fontWeight: '900', letterSpacing: .7 },
+  heroFooterText: { color: colors.muted, fontSize: 13, fontWeight: '500', marginTop: 12 },
   heroFooterIndex: { color: colors.subtle, fontSize: 9, fontWeight: '900', letterSpacing: .7 },
   substanceKind: { color: colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1.3, marginBottom: 5 },
   createAction: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 56, backgroundColor: colors.accent, paddingHorizontal: spacing.md, borderRadius: radius.lg },
@@ -394,13 +391,13 @@ const styles = StyleSheet.create({
   briefWarning: { color: colors.warning },
   briefLabel: { color: colors.subtle, fontSize: 7, fontWeight: '900', letterSpacing: .9, marginTop: 2 },
   welcomeSignature: { color: colors.accent, fontSize: 9, letterSpacing: 1.5, fontWeight: '900', marginTop: 8 },
-  greeting: { color: colors.text, fontSize: 27, fontWeight: '800', letterSpacing: -.9, lineHeight: 31, maxWidth: 360 },
+  greeting: { color: colors.text, fontSize: 31, fontWeight: '700', letterSpacing: -1.2, lineHeight: 36, maxWidth: 360 },
   accentWord: { color: colors.accent },
   date: { color: colors.muted, fontSize: 12, marginTop: 4, marginBottom: 7 },
-  summaryRow: { flexDirection: 'row', backgroundColor: colors.bgElevated, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, paddingVertical: 9 },
-  summaryCell: { flex: 1, paddingHorizontal: spacing.md },
+  summaryRow: { flexDirection: 'row', backgroundColor: 'transparent', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border },
+  summaryCell: { flex: 1, paddingHorizontal: spacing.sm },
   summaryNumber: { color: colors.text, fontSize: 20, lineHeight: 23, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  summaryLabel: { color: colors.subtle, fontSize: 9, fontWeight: '900', letterSpacing: 1.2, marginTop: 3 },
+  summaryLabel: { color: colors.muted, fontSize: 11, fontWeight: '500', letterSpacing: .2, marginTop: 3 },
   summaryDivider: { width: 1, backgroundColor: colors.border },
   sectionLabel: { color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1.8, marginTop: spacing.md, marginBottom: 2 },
   heroCard: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: layout.cardInset, borderWidth: 1, borderColor: colors.border, gap: spacing.md },
