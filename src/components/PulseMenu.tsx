@@ -1,4 +1,3 @@
-import { PulseBrand } from '@/components/PulseBrand';
 import { useState } from 'react';
 import { usePathname, useRouter } from 'expo-router';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -37,7 +36,7 @@ export function PulseMenu() {
   return (
     <>
       <View style={styles.brandRow}>
-        <PulseBrand compact />
+        <View accessibilityLabel="Science By Hugs Pulse" style={styles.wordmarkWrap}><Text style={styles.wordmark}>pulse<Text style={styles.wordmarkDot}>.</Text></Text><Text style={styles.wordmarkByline}>by Science By Hugs</Text></View>
         <Pressable accessibilityRole="button" accessibilityLabel="Open Pulse navigation" accessibilityHint="Shows app sections and tools" onPress={() => setOpen(true)} style={styles.trigger}>
           <View style={styles.bar} /><View style={styles.bar} /><View style={styles.bar} />
         </Pressable>
@@ -48,7 +47,7 @@ export function PulseMenu() {
           <View style={styles.panel}>
             <View style={styles.panelTop}>
               <View style={styles.panelHeading}>
-                <PulseBrand />
+                <View><Text style={styles.wordmark}>pulse<Text style={styles.wordmarkDot}>.</Text></Text><Text style={styles.wordmarkByline}>by Science By Hugs</Text></View>
                 <Text style={styles.panelTitle}>Explore Pulse.</Text>
                 <Text style={styles.panelSubtitle}>YOUR WORKSPACE, ORGANIZED.</Text>
               </View>
@@ -101,11 +100,15 @@ export function PulseMenu() {
 }
 
 const styles = StyleSheet.create({
+  wordmarkWrap: { justifyContent: 'center' },
+  wordmark: { color: colors.text, fontSize: 28, lineHeight: 31, fontWeight: '700', letterSpacing: -1.4 },
+  wordmarkDot: { color: colors.accent },
+  wordmarkByline: { color: colors.muted, fontSize: 10, fontWeight: '500', marginTop: 1, letterSpacing: 0.1 },
   brandRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 54, marginBottom: layout.sectionGap },
   brand: { color: colors.accent, fontSize: type.eyebrow, fontWeight: '900', letterSpacing: 2 },
   pulse: { color: colors.text, fontSize: 21, fontWeight: '900', letterSpacing: 4, marginTop: 3 },
   version: { color: colors.muted, fontSize: 9, letterSpacing: 1 },
-  trigger: { minHeight: layout.minTapHeight, width: 46, borderWidth: 1, borderColor: colors.accentBorder, backgroundColor: colors.bgElevated, borderRadius: radius.md, justifyContent: 'center', alignItems: 'center', gap: 5 },
+  trigger: { minHeight: layout.minTapHeight, width: 46, borderWidth: 0, backgroundColor: 'transparent', borderRadius: radius.md, justifyContent: 'center', alignItems: 'center', gap: 5 },
   bar: { width: 18, height: 2, backgroundColor: colors.accent, borderRadius: 2 },
   scrim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-start', paddingTop: 38 },
   panel: { marginHorizontal: 12, marginBottom: 20, borderRadius: radius.xl, borderWidth: 1, borderColor: colors.accentBorder, backgroundColor: colors.panel, maxHeight: '91%', overflow: 'hidden' },
