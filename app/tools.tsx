@@ -1,6 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { PulseMenu } from '@/components/PulseMenu';
 import { colors, layout, radius, spacing, type } from '@/theme';
 
@@ -18,6 +18,9 @@ export default function ToolsScreen() {
   const [labelConcentration, setLabelConcentration] = useState('');
   const [vialAmount, setVialAmount] = useState('');
   const [liquidVolume, setLiquidVolume] = useState('');
+  const [vialUnit, setVialUnit] = useState<'mg' | 'mcg'>('mg');
+  const [referenceAmount, setReferenceAmount] = useState('');
+  const [referenceUnit, setReferenceUnit] = useState<'mg' | 'mcg'>('mcg');
 
   const doseVolume = useMemo(() => {
     const amount = numberFrom(intendedAmount);
@@ -28,8 +31,13 @@ export default function ToolsScreen() {
   const calculatedConcentration = useMemo(() => {
     const amount = numberFrom(vialAmount);
     const volume = numberFrom(liquidVolume);
-    return amount !== null && volume !== null ? amount / volume : null;
-  }, [vialAmount, liquidVolume]);
+    return amount !== null && volume !== null ? (vialUnit === 'mcg' ? amount / 1000 : amount) / volume : null;
+  }, [vialAmount, liquidVolume, vialUnit]);
+
+  const referenceVolume = useMemo(() => {
+    const amount = numberFrom(referenceAmount);
+    return amount !== null && calculatedConcentration !== null ? (referenceUnit === 'mcg' ? amount / 1000 : amount) / calculatedConcentration : null;
+  }, [referenceAmount, referenceUnit, calculatedConcentration]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -37,7 +45,7 @@ export default function ToolsScreen() {
         <PulseMenu />
         <Text style={styles.kicker}>PRECISION LAB / 01</Text>
         <Text style={styles.title}>Calculators</Text>
-        <Text style={styles.intro}>Two reference calculators for quantities you already know. No dosing instructions, recommendations or medical decisions.</Text>
+        <Text style={styles.intro}>Two clear reference tools for quantities you enter. No dose recommendations or preparation instructions.</Text>
 
         <View style={styles.panel}>
           <View style={styles.heading}><Text style={styles.index}>01</Text><View style={styles.flex}><Text style={styles.panelTitle}>Dose → volume</Text><Text style={styles.caption}>Enter the intended quantity and concentration from the label using matching mass units.</Text></View></View>
@@ -49,12 +57,26 @@ export default function ToolsScreen() {
         </View>
 
         <View style={styles.panel}>
-          <View style={styles.heading}><Text style={styles.index}>02</Text><View style={styles.flex}><Text style={styles.panelTitle}>Vial concentration</Text><Text style={styles.caption}>Reference concentration arithmetic only. The app does not tell you how to prepare or reconstitute a substance.</Text></View></View>
-          <Text style={styles.inputLabel}>TOTAL SUBSTANCE ON LABEL (mg)</Text>
-          <TextInput accessibilityLabel="Total substance in milligrams" style={styles.input} keyboardType="decimal-pad" placeholder="Total mg" placeholderTextColor={colors.subtle} value={vialAmount} onChangeText={setVialAmount} />
-          <Text style={styles.inputLabel}>FINAL SOLUTION VOLUME (mL)</Text>
+          <View style={styles.heading}><Text style={styles.index}>02</Text><View style={styles.flex}><Text style={styles.panelTitle}>Peptide reconstitution</Text><Text style={styles.caption}>Calculate concentration from the labeled peptide amount and final liquid volume you enter. Reference math only.</Text></View></View>
+          <Text style={styles.inputLabel}>PEPTIDE AMOUNT ON LABEL</Text>
+          <View style={styles.inputRow}>
+            <TextInput accessibilityLabel={`Peptide amount in ${vialUnit}`} style={[styles.input, styles.flex]} keyboardType="decimal-pad" placeholder="Labeled amount" placeholderTextColor={colors.muted} value={vialAmount} onChangeText={setVialAmount} />
+            <Pressable accessibilityRole="button" accessibilityLabel={`Switch amount unit; currently ${vialUnit}`} style={styles.unitButton} onPress={() => { setVialAmount(''); setVialUnit(vialUnit === 'mg' ? 'mcg' : 'mg'); }}><Text style={styles.unitButtonText}>{vialUnit} ↕</Text></Pressable>
+          </View>
+          <Text style={styles.inputLabel}>FINAL LIQUID VOLUME (mL)</Text>
           <TextInput accessibilityLabel="Final solution volume in milliliters" style={styles.input} keyboardType="decimal-pad" placeholder="Final volume in mL" placeholderTextColor={colors.subtle} value={liquidVolume} onChangeText={setLiquidVolume} />
-          <View style={styles.output}><Text style={styles.outputLabel}>CALCULATED CONCENTRATION</Text><Text style={styles.outputValue}>{calculatedConcentration === null ? '—' : `${format(calculatedConcentration)} mg/mL`}</Text></View>
+          <View style={styles.outputColumn}>
+            <Text style={styles.outputLabel}>CALCULATED CONCENTRATION</Text>
+            <Text style={styles.bigResult}>{calculatedConcentration === null ? '—' : `${format(calculatedConcentration)} mg/mL`}</Text>
+            <Text style={styles.secondaryResult}>{calculatedConcentration === null ? 'Enter both amounts above' : `${format(calculatedConcentration * 1000)} mcg/mL`}</Text>
+          </View>
+          <Text style={styles.inputLabel}>OPTIONAL REFERENCE QUANTITY</Text>
+          <View style={styles.inputRow}>
+            <TextInput accessibilityLabel={`Optional reference amount in ${referenceUnit}`} style={[styles.input, styles.flex]} keyboardType="decimal-pad" placeholder="User-entered quantity" placeholderTextColor={colors.muted} value={referenceAmount} onChangeText={setReferenceAmount} />
+            <Pressable accessibilityRole="button" accessibilityLabel={`Switch reference unit; currently ${referenceUnit}`} style={styles.unitButton} onPress={() => { setReferenceAmount(''); setReferenceUnit(referenceUnit === 'mg' ? 'mcg' : 'mg'); }}><Text style={styles.unitButtonText}>{referenceUnit} ↕</Text></Pressable>
+          </View>
+          <View style={styles.output}><Text style={styles.outputLabel}>REFERENCE VOLUME</Text><Text style={styles.outputValue}>{referenceVolume === null ? '—' : `${format(referenceVolume)} mL`}</Text></View>
+          <Text style={styles.caption}>Results show only arithmetic from values you provide. They do not establish a safe dose, diluent, or preparation method.</Text>
         </View>
         <Text style={styles.disclaimer}>Science By Hugs Pulse organizes user-entered information. Verify units, product labeling, and any medication preparation instructions with a qualified clinician or pharmacist. These tools do not establish safety, sterility, suitability, or a dose.</Text>
       </ScrollView>
@@ -69,6 +91,12 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: type.title, fontWeight: '900', letterSpacing: -1, marginTop: spacing.xs },
   intro: { color: colors.muted, fontSize: type.body, lineHeight: 21, marginTop: spacing.sm, marginBottom: spacing.lg },
   panel: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: layout.cardInset, borderWidth: 1, borderColor: colors.border, gap: 10, marginBottom: spacing.md },
+  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  unitButton: { paddingHorizontal: 13, minHeight: 48, justifyContent: 'center', borderWidth: 1, borderColor: colors.accentBorder, borderRadius: radius.md, backgroundColor: colors.accentSoft },
+  unitButtonText: { color: colors.accent, fontWeight: '800' },
+  outputColumn: { gap: 5, backgroundColor: colors.accentSoft, borderColor: colors.accentBorder, borderWidth: 1, padding: spacing.md, borderRadius: radius.md },
+  bigResult: { color: colors.text, fontSize: 26, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  secondaryResult: { color: colors.muted, fontSize: 13, fontWeight: '700' },
   heading: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start', marginBottom: spacing.sm },
   flex: { flex: 1, minWidth: 0 },
   index: { color: colors.accent, fontSize: 20, fontWeight: '900', fontVariant: ['tabular-nums'] },
