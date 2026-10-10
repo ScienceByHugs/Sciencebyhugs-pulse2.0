@@ -271,6 +271,7 @@ export default function TodayScreen() {
                 >
                   <Text style={styles.primaryButtonText}>{loggingId === item.id ? 'LOGGING…' : recentLogAt[item.id] ? 'LOGGED ✓' : completion.completedIds.has(item.id) ? 'LOG ANOTHER ENTRY' : 'CONFIRM LOG'}</Text>
                 </Pressable>
+                {logFeedback?.id === item.id ? <Text accessibilityRole="text" style={styles.inlineFeedback}>{logFeedback.message}</Text> : null}
               </View>
             </View>
           );
@@ -413,6 +414,7 @@ const styles = StyleSheet.create({
   inventoryText: { color: colors.muted, fontSize: 12, lineHeight: 18, fontVariant: ['tabular-nums'], flexShrink: 1 },
   lowText: { color: '#f6bd75', fontWeight: '900' },
   primaryButton: { backgroundColor: colors.accent, borderRadius: radius.md, paddingVertical: 16, alignItems: 'center', marginTop: 2 },
+  inlineFeedback: { color: colors.success, fontSize: 12, marginTop: 5, textAlign: 'center', fontWeight: '700' },
   primaryButtonText: { color: '#03111f', fontWeight: '900', letterSpacing: 1.1 },
   emptyCard: { backgroundColor: colors.panel, borderRadius: radius.xl, padding: layout.cardInset, borderWidth: 1, borderColor: colors.border, marginTop: spacing.lg },
   cardTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
