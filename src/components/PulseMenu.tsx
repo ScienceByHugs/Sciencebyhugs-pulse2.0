@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePathname, useRouter } from 'expo-router';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, layout, radius, spacing, type } from '@/theme';
@@ -32,6 +33,7 @@ export function PulseMenu() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
     <>
@@ -42,7 +44,7 @@ export function PulseMenu() {
         </Pressable>
       </View>
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <View style={styles.scrim}>
+        <View style={[styles.scrim, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }]}>
           <Pressable accessibilityRole="button" accessibilityLabel="Dismiss navigation" style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
           <View style={styles.panel}>
             <View style={styles.panelTop}>
@@ -109,8 +111,8 @@ const styles = StyleSheet.create({
   version: { color: colors.muted, fontSize: 9, letterSpacing: 1 },
   trigger: { minHeight: layout.minTapHeight, width: 46, borderWidth: 0, backgroundColor: 'transparent', borderRadius: radius.md, justifyContent: 'center', alignItems: 'center', gap: 5 },
   bar: { width: 18, height: 2, backgroundColor: colors.accent, borderRadius: 2 },
-  scrim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-start', paddingTop: 38 },
-  panel: { marginHorizontal: 12, marginBottom: 20, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: '#0B1727', maxHeight: '91%', overflow: 'hidden' },
+  scrim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-start' },
+  panel: { marginHorizontal: 12, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: '#0B1727', flexShrink: 1, overflow: 'hidden' },
   panelTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', padding: layout.cardInset, borderBottomWidth: 1, borderBottomColor: colors.border },
   panelHeading: { flex: 1, minWidth: 0 },
   panelTitle: { color: colors.text, fontSize: 27, fontWeight: '900', letterSpacing: -0.9, marginTop: 7 },
