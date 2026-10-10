@@ -47,7 +47,6 @@ export function PulseMenu() {
           <View style={styles.panel}>
             <View style={styles.panelTop}>
               <View style={styles.panelHeading}>
-                <View><Text style={styles.wordmark}>pulse<Text style={styles.wordmarkDot}>.</Text></Text><Text style={styles.wordmarkByline}>by Science By Hugs</Text></View>
                 <Text style={styles.panelTitle}>Explore Pulse.</Text>
                 <Text style={styles.panelSubtitle}>YOUR WORKSPACE, ORGANIZED.</Text>
               </View>
