@@ -1,3 +1,4 @@
+import { OrbitalBackground } from '@/components/OrbitalBackground';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
@@ -193,6 +194,7 @@ export default function LogScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <OrbitalBackground />
       <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
         <PulseMenu />
         <Text style={styles.eyebrow}>YOUR HISTORY</Text>

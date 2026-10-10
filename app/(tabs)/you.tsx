@@ -1,3 +1,4 @@
+import { OrbitalBackground } from '@/components/OrbitalBackground';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
@@ -188,6 +189,7 @@ export default function YouScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <OrbitalBackground />
       <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
         <PulseMenu />
         <Text style={styles.eyebrow}>PRIVATE BY DESIGN</Text>

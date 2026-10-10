@@ -1,8 +1,8 @@
 export const colors = {
-  bg: '#050A10',
-  bgElevated: '#08111B',
-  panel: '#0B1622',
-  panel2: '#101E2C',
+  bg: '#070F1E',
+  bgElevated: '#0A1727',
+  panel: '#0E1B2C',
+  panel2: '#152439',
   border: '#172A3A',
   accentBorder: '#1E668F',
   accent: '#62CCFF',
