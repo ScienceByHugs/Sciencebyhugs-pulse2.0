@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   kicker: { color: colors.accent, fontWeight: '900', letterSpacing: 1.6, fontSize: type.eyebrow, marginTop: spacing.md },
   title: { color: colors.text, fontSize: type.title, fontWeight: '700', letterSpacing: -1, marginTop: spacing.sm },
   body: { color: colors.muted, fontSize: type.body, lineHeight: 22, marginTop: spacing.sm, marginBottom: spacing.lg },
-  card: { padding: layout.cardInset, borderWidth: 0, borderColor: 'transparent', backgroundColor: 'transparent', borderRadius: 0, gap: spacing.md, marginBottom: spacing.md borderBottomWidth: 1, borderBottomColor: colors.border, },
+  card: { padding: layout.cardInset, borderWidth: 0, borderColor: 'transparent', backgroundColor: 'transparent', borderRadius: 0, gap: spacing.md, marginBottom: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border, },
   eyebrow: { color: colors.accent, fontSize: 10, fontWeight: '900', letterSpacing: 1.3 },
   heading: { color: colors.text, fontSize: 19, fontWeight: '900' },
   detail: { color: colors.muted, fontSize: 12, lineHeight: 18 },
