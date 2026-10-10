@@ -40,6 +40,11 @@ export async function rescheduleReminders(items: TodayItem[]) {
   if (Platform.OS === 'web') return 0;
   if (!(await getRemindersEnabled())) return 0;
 
+  // iOS can revoke authorization after reminders were enabled in Pulse.
+  // Never attempt to schedule notifications while permission is denied.
+  const permission = await Notifications.getPermissionsAsync();
+  if (!permission.granted) return 0;
+
   await Notifications.cancelAllScheduledNotificationsAsync();
   const privateMode = await getPrivateNotifications();
   const now = new Date();
