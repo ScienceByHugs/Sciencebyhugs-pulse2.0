@@ -63,7 +63,13 @@ export default function TodayScreen() {
       const dueItems = items.filter((item) => isDueOnDate(item.schedule));
       const nextWindow = nextScheduledTimeToday(dueItems.map((item) => item.schedule));
       const nextTime = nextWindow ? timeLabel(nextWindow) : dueItems.length ? 'Any time' : 'Open Pulse';
-      await Promise.all([rescheduleReminders(items), updatePulseTodayWidget(dueItems.length, nextTime)]);
+      // Optional native integrations must not prevent Today from loading when iOS rejects a notification trigger.
+      const [reminderResult, widgetResult] = await Promise.allSettled([
+        rescheduleReminders(items),
+        updatePulseTodayWidget(dueItems.length, nextTime)
+      ]);
+      if (reminderResult.status === 'rejected') console.warn('Pulse reminders could not be scheduled:', reminderResult.reason);
+      if (widgetResult.status === 'rejected') console.warn('Pulse widget update failed:', widgetResult.reason);
       // Notification failures must never block dashboard data or quick logging.
       try { await notifyLowStock(items); } catch { /* retry on next refresh */ }
       setRecentSites(sites);
