@@ -35,6 +35,7 @@ export default function TodayScreen() {
   const [loading, setLoading] = useState(true);
   const [loggingId, setLoggingId] = useState<string | null>(null);
   const [recentLogAt, setRecentLogAt] = useState<Record<string, number>>({});
+  const [logFeedback, setLogFeedback] = useState<{ id: string; message: string } | null>(null);
   const completionPulse = useRef(new Animated.Value(0)).current;
 
   const load = useCallback(async () => {
@@ -161,7 +162,9 @@ export default function TodayScreen() {
         });
       }, 5000);
       if (!result.queued) await load();
-      Alert.alert(result.queued ? 'Saved offline' : 'Logged', result.queued ? 'Pulse will sync this log when your connection returns.' : `${item.name} · ${item.dose_amount} ${item.dose_unit}`);
+      const message = result.queued ? 'Saved offline · will sync when connected' : 'Saved to your history';
+      setLogFeedback({ id: item.id, message });
+      AccessibilityInfo.announceForAccessibility(message);
     } catch (error) {
       Alert.alert('Could not log dose', error instanceof Error ? error.message : 'Unknown error');
     } finally {
