@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   sectionLabel: { color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1.8, marginTop: spacing.md, marginBottom: 2 },
   heroCard: { backgroundColor: 'transparent', borderRadius: 0, padding: layout.cardInset, borderWidth: 0, borderColor: 'transparent', gap: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border, },
   lowCard: { borderColor: '#8f6b3d' },
-  completedCard: { borderColor: colors.accentBorder, backgroundColor: colors.bgElevated },
+  completedCard: { backgroundColor: 'transparent', borderColor: 'transparent' },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md },
   medName: { color: colors.text, fontSize: 20, fontWeight: '800', flexShrink: 1 },
   completedLabel: { color: colors.success, fontSize: 9, fontWeight: '900', letterSpacing: 1.1, marginTop: 7 },
