@@ -66,7 +66,7 @@ export default function ToolsScreen() {
           <TextInput accessibilityLabel="Concentration on vial in milligrams per milliliter" style={styles.input} keyboardType="decimal-pad" placeholder="For example, 200" placeholderTextColor={colors.muted} value={labelConcentration} onChangeText={setLabelConcentration} />
           <Text style={styles.inputLabel}>Prescribed injections per week</Text>
           <View style={styles.quickRow}>
-            {['1','2','3','7'].map((times) => <Pressable key={times} accessibilityRole="button" accessibilityState={{ selected: injectionsPerWeek === times }} onPress={() => setInjectionsPerWeek(times)} style={[styles.quickButton, injectionsPerWeek === times && styles.quickSelected]}><Text style={styles.quickText}>{times}</Text></Pressable>)}
+            {['1','2','3','5','7'].map((times) => <Pressable key={times} accessibilityRole="button" accessibilityState={{ selected: injectionsPerWeek === times }} onPress={() => setInjectionsPerWeek(times)} style={[styles.quickButton, injectionsPerWeek === times && styles.quickSelected]}><Text style={styles.quickText}>{times}</Text></Pressable>)}
           </View>
           <TextInput accessibilityLabel="Custom injections per week" style={styles.input} keyboardType="number-pad" placeholder="Or enter a whole number, 1–14" placeholderTextColor={colors.muted} value={injectionsPerWeek} onChangeText={setInjectionsPerWeek} />
           <View style={styles.resultOpen}>
